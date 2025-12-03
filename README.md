@@ -11,9 +11,9 @@ Artifact for "C3: CXL Coherence Controllers for Heterogeneous Architectures", HP
 This repository contains the models and workloads for evaluating CXL-based cache coherence protocols using the gem5 simulator. The evaluated protocols are:
 
 - **MESI-MESI**: Baseline MESI protocol
-- **MESI-CXL-MESI**: CXL-extended MESI protocol  
-- **MESI-CXL-MOESI**: CXL with MOESI optimizations
-- **MESI-CXL-MESIF**: CXL with MESIF optimizations
+- **MESI-CXL-MESI**
+- **MESI-CXL-MOESI**
+- **MESI-CXL-MESIF**
 
 ---
 
@@ -26,6 +26,7 @@ This repository contains the models and workloads for evaluating CXL-based cache
 - [Build Benchmarks](#build-benchmarks)
 - [Run Experiments](#run-experiments)
   - [Figure 10: Execution Time Comparison](#figure-10-execution-time-comparison)
+  - [Figure 11: Miss Latency Breakdown](#figure-11-miss-latency-breakdown)
 
 ---
 
@@ -126,7 +127,7 @@ This builds gem5 for each protocol:
 > ./script/build-gem5.sh MESI_unord 4   # Single protocol with 4 jobs
 > ```
 
-**Expected build time**: ~30-60 minutes per protocol (depending on CPU and parallelism).
+**Expected build time**: ~30-60 minutes (depending on CPU and parallelism).
 
 ---
 
@@ -150,7 +151,7 @@ The script automatically:
 1. Builds each benchmark with the appropriate configuration
 2. Extracts input files to the correct directories
 
-**Expected build time**: ~10-20 minutes for all benchmarks.
+**Expected build time**: ~10-20 minutes
 
 ---
 
@@ -214,6 +215,24 @@ python3 ./script/plot_fig10.py
 
 ---
 
+### Figure 11: Miss Latency Breakdown
 
+Figure 11 shows the miss latency breakdown for 4 representative applications (Barnes, LU-Ncont, Histogram, Vips).
+
+> **Note**: Figure 11 uses the same simulation data from Figure 10. Run Figure 10 experiments first.
+
+**Generate the plot**:
+```bash
+./script/run-fig11.sh
+```
+
+**Output**:
+```
+data/fig_11/
+└── plot/
+    └── fig11_miss_latency.pdf
+```
+
+---
 
 >>>>>>> aebcaad0 (added README)
