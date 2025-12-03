@@ -47,6 +47,7 @@
 #define SALT_SIZE 2
 #define MAX_REC_LEN 1024
 #define OFFSET 5
+#define BUFFER_SIZE 4096
 
 typedef struct {
   int keys_file_len;
@@ -63,7 +64,7 @@ typedef struct {
 
  char *key1 = "Helloworld";
  char *key2 = "howareyou";
- char *key3 = "ferrari";
+ char *key3 = "Ferrari";
  char *key4 = "whotheman";
 
  char *key1_final;
@@ -184,6 +185,64 @@ void *string_match_locator (map_args_t *task)
 /** string_match_map()
  *  Map Function that checks the hash of each word to the given hashes
  */
+
+void string_match_map1(map_args_t *args){
+    assert(args);
+    str_map_data_t* data_in = (str_map_data_t*)(args->data);
+
+
+    char buffer[BUFFER_SIZE];
+    int buffer_pos = 0;
+    int bytes_read = 0;
+
+    char * key_file = data_in->keys_file;
+    char * cur_word = malloc(MAX_REC_LEN);
+    char * cur_word_final = malloc(MAX_REC_LEN);
+
+    while (bytes_read < args->length) {
+        int to_read = BUFFER_SIZE;
+        if (bytes_read + to_read > args->length){
+            to_read = args->length - bytes_read;
+        }
+
+        memcpy(buffer, key_file + bytes_read, to_read);
+        buffer_pos = 0;
+
+        while( buffer_pos < to_read) {
+        int word_len = 0;
+
+        while( buffer_pos + word_len < to_read && buffer[buffer_pos + word_len] != ' ' && buffer[buffer_pos + word_len] != '\n') {
+            cur_word[word_len] = buffer[buffer_pos + word_len];
+            word_len++;
+        }
+        cur_word[word_len] = '\0';
+
+        if (word_len > 0) {
+        compute_hashes(cur_word, cur_word_final);
+
+        if(!strcmp(key1_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
+
+        if(!strcmp(key2_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
+
+        if(!strcmp(key3_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
+
+        if(!strcmp(key4_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
+
+        }
+        buffer_pos += word_len + 1;
+    }
+        bytes_read += to_read;
+
+}
+    free(cur_word);
+    free(cur_word_final);
+    free(args->data);
+}
+
 void string_match_map(map_args_t *args)
 {
     assert(args);
@@ -201,17 +260,17 @@ void string_match_map(map_args_t *args)
     {
         compute_hashes(cur_word, cur_word_final);
 
-        if(!strcmp(key1_final, cur_word_final));
-                //dprintf("FOUND: WORD IS %s\n", cur_word);
+        if(!strcmp(key1_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
 
-        if(!strcmp(key2_final, cur_word_final));
-                //dprintf("FOUND: WORD IS %s\n", cur_word);
+        if(!strcmp(key2_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
 
-        if(!strcmp(key3_final, cur_word_final));
-                //dprintf("FOUND: WORD IS %s\n", cur_word);
+        if(!strcmp(key3_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
 
-        if(!strcmp(key4_final, cur_word_final));
-                //dprintf("FOUND: WORD IS %s\n", cur_word);
+        if(!strcmp(key4_final, cur_word_final))
+                dprintf("FOUND: WORD IS %s\n", cur_word);
 
         key_file = key_file + key_len;
         bzero(cur_word,MAX_REC_LEN);
@@ -290,12 +349,24 @@ int main(int argc, char *argv[]) {
     map_reduce_args.partition = NULL; // use default
     map_reduce_args.result = &str_vals;
     map_reduce_args.data_size = finfo_keys.st_size;
-    map_reduce_args.L1_cache_size = atoi(GETENV("MR_L1CACHESIZE"));//1024 * 512;
-    map_reduce_args.num_map_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_reduce_threads = atoi(GETENV("MR_NUMTHREADS"));//16;
-    map_reduce_args.num_merge_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_procs = atoi(GETENV("MR_NUMPROCS"));//16;
-    map_reduce_args.key_match_factor = (float)atof(GETENV("MR_KEYMATCHFACTOR"));//2;
+map_reduce_args.L1_cache_size = 16384;  // Keep this the same since it's cache size
+printf("L1_cache_size: %d\n", map_reduce_args.L1_cache_size);
+
+map_reduce_args.num_map_threads = 6;    // Reduced from 16 to 8
+printf("num_map_threads: %d\n", map_reduce_args.num_map_threads);
+
+map_reduce_args.num_reduce_threads = 6;  // Reduced from 16 to 8
+printf("num_reduce_threads: %d\n", map_reduce_args.num_reduce_threads);
+
+map_reduce_args.num_merge_threads = 4;   // Reduced from 8 to 4
+printf("num_merge_threads: %d\n", map_reduce_args.num_merge_threads);
+
+map_reduce_args.num_procs = 8;           // Reduced from 16 to 8
+printf("num_procs: %d\n", map_reduce_args.num_procs);
+
+map_reduce_args.key_match_factor = 2;    // Keep this the same as it's a ratio
+printf("key_match_factor: %f\n", map_reduce_args.key_match_factor);
+
 
     printf("String Match: Calling String Match\n");
 

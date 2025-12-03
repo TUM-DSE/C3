@@ -64,7 +64,7 @@ int proc_get_num_cpus (void)
             num_cpus = temp;
     }
 
-    return num_cpus;
+    return 16;
 }
 
 #ifdef _LINUX_

@@ -1,0 +1,78 @@
+TIMING:
+7	256	1.00e-06	5
+Time Step 0
+Processor 0
+	Total Time = 1027
+Processor 1
+	Total Time = 887
+Processor 2
+	Total Time = 1016
+Processor 3
+	Total Time = 886
+Processor 4
+	Total Time = 1000
+Processor 5
+	Total Time = 886
+Processor 6
+	Total Time = 1034
+Time Step 1
+Processor 0
+	Total Time = 880
+Processor 1
+	Total Time = 1003
+Processor 2
+	Total Time = 872
+Processor 3
+	Total Time = 1004
+Processor 4
+	Total Time = 861
+Processor 5
+	Total Time = 993
+Processor 6
+	Total Time = 808
+Time Step 2
+Processor 0
+	Total Time = 850
+Processor 1
+	Total Time = 866
+Processor 2
+	Total Time = 828
+Processor 3
+	Total Time = 835
+Processor 4
+	Total Time = 872
+Processor 5
+	Total Time = 808
+Processor 6
+	Total Time = 881
+Time Step 3
+Processor 0
+	Total Time = 812
+Processor 1
+	Total Time = 740
+Processor 2
+	Total Time = 787
+Processor 3
+	Total Time = 810
+Processor 4
+	Total Time = 734
+Processor 5
+	Total Time = 803
+Processor 6
+	Total Time = 771
+Time Step 4
+Processor 0
+	Total Time = 893
+Processor 1
+	Total Time = 869
+Processor 2
+	Total Time = 956
+Processor 3
+	Total Time = 924
+Processor 4
+	Total Time = 972
+Processor 5
+	Total Time = 819
+Processor 6
+	Total Time = 767
+END

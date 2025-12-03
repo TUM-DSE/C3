@@ -37,7 +37,7 @@ endif
 ifeq ($(OSTYPE),Linux)
 OS = -D_LINUX_
 CC = gcc
-#DEBUG = -g
+DEBUG = -g
 CFLAGS = -Wall $(OS) $(DEBUG) -O3
 LIBS = -pthread
 endif
@@ -46,7 +46,7 @@ ifeq ($(OSTYPE),SunOS)
 OS =  -D_SOLARIS_
 #CC = cc
 CC = gcc
-#DEBUG = -g
+DEBUG = -g
 CFLAGS = -Wall $(OS) $(DEBUG) -O3 -D_FILE_OFFSET_BITS=64
 LIBS = -lm -lrt -lthread -lmtmalloc -llgrp
 endif

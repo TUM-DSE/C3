@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <math.h>
 #include <inttypes.h>
 
 #include "map_reduce.h"
@@ -43,16 +44,20 @@
 
 
 typedef struct {
-    char x;
-    char y;
+    double x;
+    double y;
+    double z;
 } POINT_T;
-
 enum {
     KEY_SX = 0,
     KEY_SY,
+    KEY_SZ,  // nuovo
     KEY_SXX,
     KEY_SYY,
+    KEY_SZZ,  // nuovo
     KEY_SXY,
+    KEY_SXZ,  // nuovo
+    KEY_SYZ,  // nuovo
 };
 
 static int intkeycmp(const void *v1, const void *v2)
@@ -74,10 +79,8 @@ static int intkeycmp(const void *v1, const void *v2)
 static void linear_regression_map(map_args_t *args) 
 {
     assert(args);
-    
     POINT_T *data = (POINT_T *)args->data;
     int i;
-
     assert(data);
 
     long long * SX  = CALLOC(sizeof(long long), 1);
@@ -85,34 +88,46 @@ static void linear_regression_map(map_args_t *args)
     long long * SY  = CALLOC(sizeof(long long), 1);
     long long * SYY = CALLOC(sizeof(long long), 1);
     long long * SXY = CALLOC(sizeof(long long), 1);
+    long long * SZ  = CALLOC(sizeof(long long), 1);  // nuovo
+    long long * SZZ = CALLOC(sizeof(long long), 1);  // nuovo
+    long long * SXZ = CALLOC(sizeof(long long), 1);  // nuovo
+    long long * SYZ = CALLOC(sizeof(long long), 1);  // nuovo
 
-    register long long x, y;
+    register long long x, y, z;
     register long long sx = 0, sxx = 0, sy = 0, syy = 0, sxy = 0;
+    register long long sz = 0, szz = 0, sxz = 0, syz = 0;  // nuovo
 
-    for (i = 0; i < args->length; i++)
-    {
-        //Compute SX, SY, SYY, SXX, SXY
+    for (i = 0; i < args->length; i++) {
         x = data[i].x;
         y = data[i].y;
+        z = data[i].z;  // nuovo
 
-        sx  += x;
-        sxx += x * x;
-        sy  += y;
-        syy += y * y;
-        sxy += x * y;
+        sx  += x*x*x;
+        sxx += x*x*x*x;
+        sy  += y*y*y;
+        syy += y*y*y*y;
+        sxy += x*y*x*y;
+        sz  += z*z*z;  // nuovo
+        szz += z*z*z*z;  // nuovo
+        sxz += x*z*x*z;  // nuovo
+        syz += y*z*y*z;  // nuovo
     }
 
-    *SX = sx;
-    *SXX = sxx;
-    *SY = sy;
-    *SYY = syy;
-    *SXY = sxy;
+    *SX = sx;   *SXX = sxx;
+    *SY = sy;   *SYY = syy;
+    *SZ = sz;   *SZZ = szz;  // nuovo
+    *SXY = sxy; *SXZ = sxz;  // nuovo
+    *SYZ = syz;             // nuovo
 
-    emit_intermediate((void*)KEY_SX,  (void*)SX,  sizeof(void*)); 
-    emit_intermediate((void*)KEY_SXX, (void*)SXX, sizeof(void*)); 
-    emit_intermediate((void*)KEY_SY,  (void*)SY,  sizeof(void*)); 
-    emit_intermediate((void*)KEY_SYY, (void*)SYY, sizeof(void*)); 
-    emit_intermediate((void*)KEY_SXY, (void*)SXY, sizeof(void*)); 
+    emit_intermediate((void*)KEY_SX,  (void*)SX,  sizeof(void*));
+    emit_intermediate((void*)KEY_SXX, (void*)SXX, sizeof(void*));
+    emit_intermediate((void*)KEY_SY,  (void*)SY,  sizeof(void*));
+    emit_intermediate((void*)KEY_SYY, (void*)SYY, sizeof(void*));
+    emit_intermediate((void*)KEY_SXY, (void*)SXY, sizeof(void*));
+    emit_intermediate((void*)KEY_SZ,  (void*)SZ,  sizeof(void*));  // nuovo
+    emit_intermediate((void*)KEY_SZZ, (void*)SZZ, sizeof(void*));  // nuovo
+    emit_intermediate((void*)KEY_SXZ, (void*)SXZ, sizeof(void*));  // nuovo
+    emit_intermediate((void*)KEY_SYZ, (void*)SYZ, sizeof(void*));  // nuovo
 }
 
 static int linear_regression_partition(int reduce_tasks, void* key, int key_size)
@@ -217,12 +232,24 @@ int main(int argc, char *argv[]) {
     map_reduce_args.partition = linear_regression_partition; 
     map_reduce_args.result = &final_vals;
     map_reduce_args.data_size = finfo.st_size - (finfo.st_size % map_reduce_args.unit_size);
-    map_reduce_args.L1_cache_size = atoi(GETENV("MR_L1CACHESIZE"));//1024 * 512;
-    map_reduce_args.num_map_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_reduce_threads = atoi(GETENV("MR_NUMTHREADS"));//16;
-    map_reduce_args.num_merge_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_procs = atoi(GETENV("MR_NUMPROCS"));//16;
-    map_reduce_args.key_match_factor = (float)atof(GETENV("MR_KEYMATCHFACTOR"));//2;
+map_reduce_args.L1_cache_size = 16384;  // Keep this the same since it's cache size
+printf("L1_cache_size: %d\n", map_reduce_args.L1_cache_size);
+
+map_reduce_args.num_map_threads = 6;    // Reduced from 16 to 8
+printf("num_map_threads: %d\n", map_reduce_args.num_map_threads);
+
+map_reduce_args.num_reduce_threads = 6;  // Reduced from 16 to 8
+printf("num_reduce_threads: %d\n", map_reduce_args.num_reduce_threads);
+
+map_reduce_args.num_merge_threads = 4;   // Reduced from 8 to 4
+printf("num_merge_threads: %d\n", map_reduce_args.num_merge_threads);
+
+map_reduce_args.num_procs = 8;           // Reduced from 16 to 8
+printf("num_procs: %d\n", map_reduce_args.num_procs);
+
+map_reduce_args.key_match_factor = 2;    // Keep this the same as it's a ratio
+printf("key_match_factor: %f\n", map_reduce_args.key_match_factor);
+
 
     printf("Linear Regression: Calling MapReduce Scheduler\n");
 
@@ -248,7 +275,7 @@ int main(int argc, char *argv[]) {
 
     long long n;
     double a, b, xbar, ybar, r2;
-    long long SX_ll = 0, SY_ll = 0, SXX_ll = 0, SYY_ll = 0, SXY_ll = 0;
+    long long SYZ_ll=0, SX_ll = 0, SY_ll = 0, SXX_ll = 0, SYY_ll = 0, SXY_ll = 0, SXZ_ll = 0, SZ_ll = 0, SZZ_ll = 0 ;
     // ADD UP RESULTS
     for (i = 0; i < final_vals.length; i++)
     {
@@ -270,6 +297,18 @@ int main(int argc, char *argv[]) {
         case KEY_SXY:
              SXY_ll = (*(long long*)curr->val);
              break;
+        case KEY_SXZ:
+            SXZ_ll = (*(long long*)curr->val);
+            break;
+        case KEY_SYZ:
+            SYZ_ll = (*(long long*)curr->val);
+            break;
+        case KEY_SZ:
+            SZ_ll = (*(long long*)curr->val);
+            break;
+        case KEY_SZZ:
+            SZZ_ll = (*(long long*)curr->val);
+            break;
         default:
              // INVALID KEY
              CHECK_ERROR(1);
@@ -282,6 +321,10 @@ int main(int argc, char *argv[]) {
     double SXX= (double)SXX_ll;
     double SYY= (double)SYY_ll;
     double SXY= (double)SXY_ll;
+    double SXZ= (double)SXZ_ll;
+    double SYZ= (double)SYZ_ll;
+    double SZ= (double)SZ_ll;
+    double SZZ= (double)SZZ_ll;
 
     n = (long long) finfo.st_size / sizeof(POINT_T); 
     b = (double)(n*SXY - SX*SY) / (n*SXX - SX*SX);
@@ -305,6 +348,11 @@ int main(int argc, char *argv[]) {
     printf("\tSXX  = %lld\n", SXX_ll);
     printf("\tSYY  = %lld\n", SYY_ll);
     printf("\tSXY  = %lld\n", SXY_ll);
+    printf("\tSZY  = %lld\n", SYZ_ll);
+    printf("\tSXZ  = %lld\n", SXZ_ll);
+    printf("\tSZZ  = %lld\n", SZZ_ll);
+    printf("\tSZ    = %lld\n", SZ_ll);
+    
 
     free(final_vals.data);
 

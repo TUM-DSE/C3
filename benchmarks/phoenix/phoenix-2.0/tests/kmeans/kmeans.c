@@ -406,12 +406,24 @@ int main(int argc, char **argv)
     map_reduce_args.partition = NULL; // use default
     map_reduce_args.result = &kmeans_vals;
     map_reduce_args.data_size = (num_points + num_means) * dim * sizeof(int);  
-    map_reduce_args.L1_cache_size = atoi(GETENV("MR_L1CACHESIZE"));//1024 * 8;
-    map_reduce_args.num_map_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_reduce_threads = atoi(GETENV("MR_NUMTHREADS"));//16;
-    map_reduce_args.num_merge_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_procs = atoi(GETENV("MR_NUMPROCS"));//16;
-    map_reduce_args.key_match_factor = (float)atof(GETENV("MR_KEYMATCHFACTOR"));//2;
+map_reduce_args.L1_cache_size = 16384;  // Keep this the same since it's cache size
+printf("L1_cache_size: %d\n", map_reduce_args.L1_cache_size);
+
+map_reduce_args.num_map_threads = 6;    // Reduced from 16 to 8
+printf("num_map_threads: %d\n", map_reduce_args.num_map_threads);
+
+map_reduce_args.num_reduce_threads = 6;  // Reduced from 16 to 8
+printf("num_reduce_threads: %d\n", map_reduce_args.num_reduce_threads);
+
+map_reduce_args.num_merge_threads = 4;   // Reduced from 8 to 4
+printf("num_merge_threads: %d\n", map_reduce_args.num_merge_threads);
+
+map_reduce_args.num_procs = 8;           // Reduced from 16 to 8
+printf("num_procs: %d\n", map_reduce_args.num_procs);
+
+map_reduce_args.key_match_factor = 2;    // Keep this the same as it's a ratio
+printf("key_match_factor: %f\n", map_reduce_args.key_match_factor);
+
     map_reduce_args.use_one_queue_per_task = true;
     
     printf("KMeans: Calling MapReduce Scheduler\n");
@@ -471,11 +483,7 @@ int main(int argc, char **argv)
 
     free(kmeans_data.points);
     
-    for (i = 0; i < num_means; i++) 
-    {
-        free(kmeans_data.means[i].key);
-        free(kmeans_data.means[i].val);
-    }
+    
     free (kmeans_data.means);
     free (means);
     

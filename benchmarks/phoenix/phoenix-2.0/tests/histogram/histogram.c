@@ -287,12 +287,24 @@ int main(int argc, char *argv[]) {
     
     map_reduce_args.data_size = imgdata_bytes;
 
-    map_reduce_args.L1_cache_size = atoi(GETENV("MR_L1CACHESIZE"));//1024 * 512;
-    map_reduce_args.num_map_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_reduce_threads = atoi(GETENV("MR_NUMTHREADS"));//16;
-    map_reduce_args.num_merge_threads = atoi(GETENV("MR_NUMTHREADS"));//8;
-    map_reduce_args.num_procs = atoi(GETENV("MR_NUMPROCS"));//16;
-    map_reduce_args.key_match_factor = (float)atof(GETENV("MR_KEYMATCHFACTOR"));//2;
+map_reduce_args.L1_cache_size = 16384;  // Keep this the same since it's cache size
+printf("L1_cache_size: %d\n", map_reduce_args.L1_cache_size);
+
+map_reduce_args.num_map_threads = 8;    // Reduced from 16 to 8
+printf("num_map_threads: %d\n", map_reduce_args.num_map_threads);
+
+map_reduce_args.num_reduce_threads = 8;  // Reduced from 16 to 8
+printf("num_reduce_threads: %d\n", map_reduce_args.num_reduce_threads);
+
+map_reduce_args.num_merge_threads = 4;   // Reduced from 8 to 4
+printf("num_merge_threads: %d\n", map_reduce_args.num_merge_threads);
+
+map_reduce_args.num_procs = 8;           // Reduced from 16 to 8
+printf("num_procs: %d\n", map_reduce_args.num_procs);
+
+map_reduce_args.key_match_factor = 2;    // Keep this the same as it's a ratio
+printf("key_match_factor: %f\n", map_reduce_args.key_match_factor);
+
 
     fprintf(stderr, "Histogram: Calling MapReduce Scheduler\n");
 
@@ -318,8 +330,8 @@ int main(int argc, char *argv[]) {
     intptr_t freq;
     short prev = 0;
     
-    dprintf("\n\nBlue\n");
-    dprintf("----------\n\n");
+    printf("\n\nBlue\n");
+    printf("----------\n\n");
     for (i = 0; i < hist_vals.length; i++)
     {
         keyval_t * curr = &((keyval_t *)hist_vals.data)[i];
@@ -328,16 +340,16 @@ int main(int argc, char *argv[]) {
         
         if (pix_val - prev > 700) {
             if (pix_val >= 2000) {
-                dprintf("\n\nRed\n");
-                dprintf("----------\n\n");
+                printf("\n\nRed\n");
+                printf("----------\n\n");
             }
             else if (pix_val >= 1000) {
-                dprintf("\n\nGreen\n");
-                dprintf("----------\n\n");
+                printf("\n\nGreen\n");
+                printf("----------\n\n");
             }
         }
         
-        dprintf("%hd - %" PRIdPTR "\n", pix_val % 1000, freq);
+
         
         prev = pix_val;
     }
