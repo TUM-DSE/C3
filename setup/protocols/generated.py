@@ -170,7 +170,7 @@ class DirController(Directory_Controller):
 def make_l1_cache(system, ruby_system, cpu, cluster_id):
     return L1Cache(system, ruby_system, cpu, cluster_id)
 
-def make_l2_cache(system, ruby_system):
+def make_l2_cache(system, ruby_system, cluster_id):
     return L0Cache(system, ruby_system)
 
 def make_dir(ruby_system, range, mem_ctrl):

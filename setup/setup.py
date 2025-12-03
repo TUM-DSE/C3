@@ -1,59 +1,55 @@
+#!/usr/bin/env python3
+
+
 import m5
 from m5.objects import *
 import argparse
 import math
+import os
+
 
 m5.util.addToPath("/gem5/configs")
-from common.FileSystemConfig import config_filesystem
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(description="Unified gem5 setup for C-3 Artifact")
 
-parser.add_argument("-c", "--cores", help="Number of cores", type=int, default=2)
+parser.add_argument("-c", "--cores", help="Number of cores", type=int, required=True)
 parser.add_argument('-ro', "--redirect-output", help="redirect the output", action='store_true') 
 parser.add_argument('-ri', "--redirect-input", help="redirect the input", action='store_true') 
-parser.add_argument('-rm', "--remote-memory", help="use remote memory", action='store_true') 
+parser.add_argument('-rm', "--remote-memory", help="use remote memory", action='store_true')
+parser.add_argument("--switched", help="Switch cluster_id behavior for hetero protocols", action='store_true')
+parser.add_argument("--remote-latency", type=int, default=140, help="Remote latency value (default: 140)")
 parser.add_argument("cmd", nargs=argparse.REMAINDER)
-parser.add_argument("--remote-latency", type=int, default=10, help="Remote latency value")
 args = parser.parse_args()
+
 remote_latency = 140
 
 print(f"PROTOCOL: {buildEnv['PROTOCOL']}")
-if buildEnv["PROTOCOL"] == "MSI_unord":
-    from protocols.generated import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "MESI_unord":
+print(f"Cores: {args.cores}")
+print(f"Switched: {args.switched}")
+print(f"Remote Latency: {remote_latency}")
+
+
+
+print(f"{buildEnv['PROTOCOL']}")
+if buildEnv["PROTOCOL"] == "MESI_unord":
     from protocols.generated import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
 elif buildEnv["PROTOCOL"] == "MESI_unord_CXL":
     from protocols.generatedCXL import make_l1_cache, make_dir, make_l2_cache, has_l2_cache  
 elif buildEnv["PROTOCOL"] == "MESI_CXL_MOESI":
-    from protocols.generatedCXLheteroS import make_l1_cache, make_dir, make_l2_cache, has_l2_cache  
+    if args.switched:
+        from protocols.generatedCXLheteroS import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
+    else:
+        from protocols.generatedCXLhetero import make_l1_cache, make_dir, make_l2_cache, has_l2_cache  
 elif buildEnv["PROTOCOL"] == "MESI_CXL_MESIF":
-    from protocols.generatedCXLheteroS import make_l1_cache, make_dir, make_l2_cache, has_l2_cache  
-elif buildEnv["PROTOCOL"] == "MOESI_unord_CXL":
-    from protocols.generatedCXL import make_l1_cache, make_dir, make_l2_cache, has_l2_cache  
-elif buildEnv["PROTOCOL"] == "MSI_unord_CXL":
-    from protocols.generatedCXL import make_l1_cache, make_dir, make_l2_cache, has_l2_cache   
-elif buildEnv["PROTOCOL"] == "MOESI_two_level_synth":
-    from protocols.generatedsynthesis import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "MESI_two_level_synth":
-    from protocols.generatedsynthesis import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "MESI_three_level_synth":
-    from protocols.generatedthreel import make_l1_cache, make_dir, make_l2_cache, make_l2_private_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "nicolo-MSI_unord":
-    from protocols.generatedsetup import make_l1_cache, make_dir, make_l2_cache, make_l2_private_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "MESI_Two_Level":
-    from protocols.generatedsynthesismesi import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "MOESI_CMP_directory":
-    from protocols.moesi import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "MOESI_CMP_directory_edit":
-    from protocols.moesi_edit import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
-elif buildEnv["PROTOCOL"] == "GENERATED":
-    from protocols.generated import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
+    if args.switched:
+        from protocols.generatedCXLheteroS import make_l1_cache, make_dir, make_l2_cache, has_l2_cache
+    else:
+        from protocols.generatedCXLhetero import make_l1_cache, make_dir, make_l2_cache, has_l2_cache  
 else:
     fatal("unsupported cache protocol")
 
 def split_in_half(iter):
     array = list(iter)
-    # return array
     return array[:(len(array) // 2)], array[(len(array) // 2):]
 
 class MyNetwork(GarnetNetwork):
@@ -64,7 +60,6 @@ class MyNetwork(GarnetNetwork):
         self.ext_links = []
         self.int_links = []
         self.ruby_system = ruby_system
-## data_msg_size. Changed from default value 64 to 8. 
         self.ni_flit_size = 72        
 
     def create_router(self):
@@ -107,7 +102,6 @@ ruby_system.network.number_of_virtual_networks = 9
 mem_range = AddrRange("8GB")
 component_latency = 10
 local_latency = 10
-# cluster_latency = 140
 
 remote_addr_vaddr = 0x20000000
 remote_addr_range = AddrRange(
@@ -116,7 +110,6 @@ remote_addr_range = AddrRange(
 )
 
 mem_ctrl = MemCtrl()
-# mem_ctrl.dram = DDR3_1600_8x8()
 mem_ctrl.dram = DDR5_4400_4x8()
 mem_ctrl.dram.range = mem_range
 
@@ -127,7 +120,6 @@ network.connect_controller(dir_rounter, dir)
 
 if args.remote_memory:
     remote_mem_ctrl = MemCtrl()
-    # remote_mem_ctrl.dram = DDR3_1600_8x8()
     remote_mem_ctrl.dram = DDR5_4400_4x8()
     remote_mem_ctrl.dram.range = remote_addr_range
 
@@ -147,14 +139,10 @@ for cluster_id, cluster in enumerate(split_in_half(range(args.cores))):
         network.connect_routers([remote_dir_rounter, cluster_router], remote_latency)
     else:
         network.connect_routers([dir_rounter, cluster_router], remote_latency, weight=1)
-        # cluster_routers.append(cluster_router)
-
-    # network.connect_routers(cluster_routers, remote_latency, weight=1)
 
     local_routers = [cluster_router]
 
     if has_l2_cache():
-        # l2_cache = make_l2_cache(system, ruby_system)
         l2_cache = make_l2_cache(system, ruby_system, cluster_id)
         exec("ruby_system.l2_cntrl%d = l2_cache" % cluster_id)
         l2_router = network.create_router()
@@ -163,16 +151,7 @@ for cluster_id, cluster in enumerate(split_in_half(range(args.cores))):
     
 
     for cpu_id in cluster:
-        # cpu = X86TimingSimpleCPU(cpu_id=cpu_id)
-        # cpu = X86O3CPU(cpu_id=cpu_id)
         cpu = X86O3CPU(cpu_id=cpu_id)
-        # cpu = ArmO3CPU_TSO_En(cpu_id=cpu_id)
-        # cpu = ArmO3CPU(cpu_id=cpu_id)
-
-        # if cluster_id == 1:
-            # cpu = ArmO3CPU_TSO_En(cpu_id=cpu_id)
-        # else:
-            # cpu = ArmO3CPU(cpu_id=cpu_id)
         cpu.createInterruptController()
         cpus.append(cpu)
         l1cache = make_l1_cache(system, ruby_system, cpu, cluster_id)
@@ -186,7 +165,6 @@ for cluster_id, cluster in enumerate(split_in_half(range(args.cores))):
             dcache=l1cache.dcache(),
             clk_domain=l1cache.clk_domain,
             ruby_system=ruby_system,
-            # deadlock_threshold = 3e8
         )
         l1cache.sequencer = sequencer
         sequencer.connectCpuPorts(cpu)
@@ -197,8 +175,8 @@ for cluster_id, cluster in enumerate(split_in_half(range(args.cores))):
 
 
 system.cpu = cpus
-system.mem_mode = "timing"  # Use timing accesses
-system.mem_ranges = [mem_range]  # Create an address range
+system.mem_mode = "timing"  
+system.mem_ranges = [mem_range]  
 system.mem_ctrl = mem_ctrl
 if args.remote_memory:
     system.remote_mem_ctrl = remote_mem_ctrl
@@ -206,14 +184,28 @@ if args.remote_memory:
 ruby_system.num_of_sequencers = len(sequencers)
 
 network.setup_buffers()
-# Set up a proxy port for the system_port. Used for load binaries and other functional-only things.
 ruby_system.sys_port_proxy = RubyPortProxy()
 system.system_port = ruby_system.sys_port_proxy.in_ports
 
 
+# argparse.REMAINDER preserves a leading '--' token when present.
+# If users call the script as: gem5.opt setup.py [opts] -- program args
+# then args.cmd will start with '--'. Strip it so the program path is the
+# first element.
+if args.cmd and args.cmd[0] == "--":
+    args.cmd = args.cmd[1:]
+
+if not args.cmd:
+    fatal("No workload/binary specified. Expect: -- <binary> [args...]")
+
+# Set working directory to the binary's directory so relative paths work
+binary_path = args.cmd[0]
+binary_dir = os.path.dirname(os.path.abspath(binary_path))
+
 system.workload = SEWorkload.init_compatible(args.cmd[0])
 
 process = Process()
+process.cwd = binary_dir  # Set working directory for the process
 
 if args.redirect_output:
     process.output = "output.txt"
@@ -221,21 +213,19 @@ if args.redirect_output:
 if args.redirect_input:
     process.input = "./m5out/input.txt"
 
-process.cmd = args.cmd #[binary, "-p2", "-m10", "-o"]
+process.cmd = args.cmd
 process.env = [f"MAPRED_NPROCESSORS={len(cpus) - 1}"]
 
-# Set the cpu to use the process as its workload and create thread contexts
 for cpu in system.cpu:
     cpu.workload = process
     cpu.createThreads()
 
 
-# Set up the pseudo file system for the threads function above
-config_filesystem(system)
+# config_filesystem(system)
 
 root = Root(full_system=False, system=system)
 m5.instantiate()
-#process.map(remote_addr_vaddr, remote_addr_range.start, remote_addr_range.size())
+
 print(f"Beginning simulation!")
 exit_event = m5.simulate()
 print(f"Exiting @ tick {m5.curTick()} because {exit_event.getCause()}")
