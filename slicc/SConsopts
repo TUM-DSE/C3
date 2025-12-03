@@ -1,0 +1,2 @@
+Import('*')
+main.Append(PROTOCOL_DIRS=[Dir('.')])

@@ -28,7 +28,7 @@ for PROTOCOL in "${PROTOCOLS[@]}"; do
     scons defconfig "${BUILD_DIR}" build_opts/X86
     scons setconfig "${BUILD_DIR}" \
         RUBY=y \
-        RUBY_PROTOCOL_${PROTOCOL}=y
+        RUBY_${PROTOCOL}=y
     scons "${BUILD_DIR}/gem5.opt" -j "${JOBS}"
     echo "Done: ${BUILD_DIR}/gem5.opt"
 done
