@@ -1,0 +1,7 @@
+protocol "MESI_unord";
+
+include "RubySlicc_interfaces.slicc";
+include "MESI_unord_MESI_unord_msg.sm";
+include "MESI_unord_MESI_unord_dir.sm";
+include "MESI_unord_MESI_unord_proxy.sm";
+include "MESI_unord_MESI_unord_cache1.sm";

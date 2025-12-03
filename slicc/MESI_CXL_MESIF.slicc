@@ -1,0 +1,10 @@
+protocol "MESI_CXL_MESIF";
+
+include "RubySlicc_interfaces.slicc";
+include "MESIF_unord_ifetch_CXL2_msg.sm";
+include "MESI_unord_ifetch_CXL2_dir.sm";
+include "MESI_unord_MESIF_CXL2_proxy-01.sm";
+include "MESI_unord_MESIF_CXL2_proxy-23.sm";
+include "MESI_unord_MESIF_CXL2_cache1-01.sm";
+include "MESI_unord_MESIF_CXL2_cache1-23.sm";
+
