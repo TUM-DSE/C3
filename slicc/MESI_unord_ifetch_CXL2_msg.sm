@@ -1,0 +1,71 @@
+//Backend.SLICC.ModularSLICC.msg.GenMsgEnum
+enumeration(CoherenceMessageType, desc="Types of coherence messages") {
+  BIConflictAckL2, desc="BIConflictAckL2";
+  BIConflictL2, desc="BIConflictL2";
+  BIConflictL2load, desc="BIConflictL2load";
+  BIRspIL2, desc="BIRspIL2";
+  BIRspSL2, desc="BIRspSL2";
+  BISnpDataL2, desc="BISnpDataL2";
+  BISnpInvL2, desc="BISnpInvL2";
+  CmpL2, desc="CmpL2";
+  Cmp_EL2, desc="Cmp_EL2";
+  Cmp_SL2, desc="Cmp_SL2";
+  Fwd_GetML1, desc="Fwd_GetML1";
+  Fwd_GetSL1, desc="Fwd_GetSL1";
+  GetML1, desc="GetML1";
+  GetML1store, desc="GetML1store";
+  GetM_Ack_ADL1, desc="GetM_Ack_ADL1";
+  GetM_Ack_DL1, desc="GetM_Ack_DL1";
+  GetSL1, desc="GetSL1";
+  GetSL1load, desc="GetSL1load";
+  GetSL1store, desc="GetSL1store";
+  GetS_AckL1, desc="GetS_AckL1";
+  InvL1, desc="InvL1";
+  Inv_AckL1, desc="Inv_AckL1";
+  MemClnEvct_IL2, desc="MemClnEvct_IL2";
+  MemDataL2, desc="MemDataL2";
+  MemInv_A_SnpInvL2, desc="MemInv_A_SnpInvL2";
+  MemInv_A_SnpInvL2load, desc="MemInv_A_SnpInvL2load";
+  MemRd_A_SnpInvL2, desc="MemRd_A_SnpInvL2";
+  MemRd_A_SnpInvL2load, desc="MemRd_A_SnpInvL2load";
+  MemRd_S_SnpDataL2, desc="MemRd_S_SnpDataL2";
+  MemRd_S_SnpDataL2load, desc="MemRd_S_SnpDataL2load";
+  MemWr_IL2, desc="MemWr_IL2";
+  MemWr_SL2, desc="MemWr_SL2";
+  PutEL1, desc="PutEL1";
+  PutE_AckL1, desc="PutE_AckL1";
+  PutIL1, desc="PutIL1";
+  PutI_AckL1, desc="PutI_AckL1";
+  PutML1, desc="PutML1";
+  PutM_AckL1, desc="PutM_AckL1";
+  PutSL1, desc="PutSL1";
+  PutOL1, desc="PutOL1";
+  PutO_AckL1, desc="PutOL1_Ack";
+  PutS_AckL1, desc="PutS_AckL1";
+  WBL1, desc="WBL1";
+}
+
+//Backend.SLICC.ModularSLICC.msg.GenMsgStruct
+structure(CoherenceMessage, desc="...", interface="Message") {
+  Addr LineAddress,             desc="Physical address for this request";
+  CoherenceMessageType Type,   desc="Type of request (GetS, GetM, PutM, etc)";
+  MachineID Sender,            desc="Node who initiated the request";
+  NetDest Destination,         desc="Multicast destination mask";
+  MessageSizeType MessageSize, desc="size category of the message";
+  bool exclusiveL1, desc="Boolean exclusiveL1";
+  DataBlock cl, desc="Cache line / Data cl";
+  int acksExpectedL1, desc="Integer acksExpectedL1";
+
+
+  bool functionalRead(Packet *pkt) {
+    // A check on message type should appear here so that only those
+    // messages that contain data
+    return testAndRead(LineAddress, cl, pkt);
+  }
+
+  bool functionalWrite(Packet *pkt) {
+    // No check on message type required since the protocol should read
+    // data block from only those messages that contain valid data
+    return testAndWrite(LineAddress, cl, pkt);
+  }
+}

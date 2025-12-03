@@ -1,0 +1,1288 @@
+//Backend.SLICC.ModularSLICC.dir.GenDirHeader
+machine(MachineType:Directory, "Directory protocol")
+:
+
+  DirectoryMemory *directory;
+  // The following latencies should be exposed as command-line parameters in a future update
+  Cycles toMemLatency := 1;
+  Cycles responseLatency := 6;
+  Cycles recycleLatency := 10;
+
+  // Required networks
+  MessageBuffer *requestToMemory;
+  MessageBuffer *responseFromMemory;
+
+  // Dynamic networks
+  MessageBuffer *fwdTo, network="From", virtual_network="0", vnet_type="fwd";
+  MessageBuffer *fwdFrom, network="To", virtual_network="0", vnet_type="fwd";
+  MessageBuffer *respTo, network="From", virtual_network="1", vnet_type="resp";
+  MessageBuffer *respFrom, network="To", virtual_network="1", vnet_type="resp";
+  MessageBuffer *reqTo, network="From", virtual_network="2", vnet_type="req";
+  MessageBuffer *reqFrom, network="To", virtual_network="2", vnet_type="req";
+
+{
+  //Backend.SLICC.ModularSLICC.dir.GenDirStateDecl
+  state_declaration(State, desc="Directory states", default="Directory_State_I") {
+    E, AccessPermission:Maybe_Stale, desc="... TODO ...";
+    E_GetS, AccessPermission:Busy, desc="... TODO ...";
+    I, AccessPermission:Read_Write, desc="... TODO ...";
+    M, AccessPermission:Maybe_Stale, desc="... TODO ...";
+    M_GetS, AccessPermission:Busy, desc="... TODO ...";
+    S, AccessPermission:Read_Write, desc="... TODO ...";
+    E_GetS_WBL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_GetS_WBL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    E_PutML2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    I_GetML2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    I_GetSL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    I_GetSL2_1, AccessPermission:Read_Write, desc="... TODO ...";
+    M_PutEL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_PutML2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_PutSL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    S_GetML2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    S_GetML2_1, AccessPermission:Read_Only, desc="... TODO ...";
+    S_GetML2_2, AccessPermission:Read_Only, desc="... TODO ...";
+    S_GetML2_3, AccessPermission:Read_Only, desc="... TODO ...";
+    S_GetSL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirEvents
+  enumeration(Event, desc="Directory events") {
+    StallmemQueue_in, desc="Stall the memQueue_in port.";
+    
+    Stallfwdto_in, desc="Stall the fwdto_in port.";
+    
+    Stallreqto_in, desc="Stall the reqto_in port.";
+    
+    Stallrespto_in, desc="Stall the respto_in port.";
+    
+    allocTBE, desc="Allocate a new TBE.";
+    
+    deallocTBE, desc="Deallocate a TBE.";
+    
+    Progress, desc="Progress, please!";
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirStruct
+  structure(Entry, desc="Stored variables of the Directory machine", interface="AbstractCacheEntry", main="false") {
+    State DirectoryState, desc="Directory state";
+    NetDest cacheL2, desc="... TODO ...";
+    MachineID ownerL2, desc="... TODO ...";
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirTBE
+  structure(TBE, desc="TBE entries for Directory machine") {
+    State TBEState,       desc="Transient State";
+    DataBlock cl, desc="... TODO ...";
+    bool dirty, desc="Is the data dirty (different than memory)?";
+  }
+  
+  structure(TBETable, external="yes"){
+    TBE lookup(Addr);
+    void allocate(Addr);
+    void deallocate(Addr);
+    bool isPresent(Addr);
+    bool areNSlotsAvailable(int, Tick);
+  }
+  
+  TBETable TBEs, template="<Directory_TBE>", constructor="m_number_of_TBEs";
+  
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirStaticFns
+  Tick clockEdge();
+  Tick cyclesToTicks(Cycles c);
+  Cycles ticksToCycles(Tick t);
+  void set_tbe(TBE a);
+  void unset_tbe();
+  void wakeUpAllBuffers(Addr a);
+  
+  Entry getEntry(Addr LineAddress), return_by_pointer="yes" {
+    Entry entry := static_cast(Entry, "pointer", directory[LineAddress]);
+    if (is_invalid(entry)) {
+      entry := static_cast(Entry, "pointer", directory.allocate(LineAddress, new Entry));
+    }
+    return entry;
+  }
+  
+  State getState(TBE tbe, Addr LineAddress) {
+    if (is_valid(tbe)) {
+      return tbe.TBEState;
+    } else if (directory.isPresent(LineAddress)) {
+      return getEntry(LineAddress).DirectoryState;
+    } else {
+      return State:I;
+    }
+  }
+  
+  void setState(TBE tbe, Addr LineAddress, State state) {
+    DPRINTF(RubySlicc, "%s -> %s (addr: %#x)\n", getState(tbe, LineAddress), state, LineAddress);
+    //if (state != getState(tbe, LineAddress)) {
+    //  wakeUpAllBuffers(LineAddress);
+    //}
+    if (is_valid(tbe)) {
+      tbe.TBEState := state;
+    }
+    if (directory.isPresent(LineAddress)) {
+      getEntry(LineAddress).DirectoryState := state;
+    }
+  }
+  
+  AccessPermission getAccessPermission(Addr LineAddress) {
+    TBE tbe := TBEs[LineAddress];
+    if (is_valid(tbe)) {
+      return Directory_State_to_permission(tbe.TBEState);
+    } else if (directory.isPresent(LineAddress)) {
+      return Directory_State_to_permission(getEntry(LineAddress).DirectoryState);
+    } else {
+      return AccessPermission:NotPresent;
+    }
+  }
+  
+  void setAccessPermission(Addr LineAddress, State state) {
+    if (directory.isPresent(LineAddress)) {
+      getEntry(LineAddress).changePermission(Directory_State_to_permission(state));
+    }
+  }
+  
+  void functionalRead(Addr addr, Packet *pkt) {
+    TBE tbe := TBEs[addr];                                          
+    if (is_valid(tbe) && tbe.dirty) {                                   
+      testAndRead(addr, tbe.cl, pkt);                                   
+    } else {                                                                                                          
+      functionalMemoryRead(pkt);                                                                                      
+    }  
+  }
+  
+  int functionalWrite(Addr addr, Packet *pkt) {
+    int num_functional_writes := 0;                                                                                
+    TBE tbe := TBEs[addr];                                                                                            
+    if (is_valid(tbe) && tbe.dirty) {                                                
+      num_functional_writes := num_functional_writes +                                
+        testAndWrite(addr, tbe.cl, pkt);                                                                            
+    }                                                                           
+    num_functional_writes := num_functional_writes + functionalMemoryWrite(pkt);
+    return num_functional_writes;
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirOutPorts
+  out_port(memQueue_out, MemoryMsg, requestToMemory);
+  out_port(fwdfrom_out, CoherenceMessage, fwdFrom);
+  out_port(reqfrom_out, CoherenceMessage, reqFrom);
+  out_port(respfrom_out, CoherenceMessage, respFrom);
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirInPorts
+  in_port(memQueue_in, MemoryMsg, responseFromMemory) {
+    if (memQueue_in.isReady(clockEdge())) {
+      peek(memQueue_in, MemoryMsg) {
+        Addr LineAddress := in_msg.addr;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        if (st == State:E_GetS_WBL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          tbe.dirty := false;
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_GetS_WBL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          tbe.dirty := false;
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_PutML2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          tbe.dirty := false;
+          setState(tbe, LineAddress, State:I);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_GetML2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetM_Ack_ADL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+            out_msg.acksExpectedL2 := getEntry(LineAddress).cacheL2.count();
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_GetSL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetM_Ack_DL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          setState(tbe, LineAddress, State:E);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_GetSL2_1 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetS_AckL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).cacheL2.add(in_msg.OriginalRequestorMachId);
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_PutEL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          tbe.dirty := false;
+          setState(tbe, LineAddress, State:I);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_PutML2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          tbe.dirty := false;
+          setState(tbe, LineAddress, State:I);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_PutSL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          tbe.dirty := false;
+          setState(tbe, LineAddress, State:I);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_GetML2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetM_Ack_DL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_GetML2_1 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetM_Ack_ADL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+            out_msg.acksExpectedL2 := getEntry(LineAddress).cacheL2.count();
+          }
+          enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Control;
+            out_msg.Destination := getEntry(LineAddress).cacheL2;
+            out_msg.Type := CoherenceMessageType:InvL2;
+            out_msg.Sender := in_msg.OriginalRequestorMachId;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_GetML2_2 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetM_Ack_DL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_GetML2_3 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetM_Ack_ADL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+            out_msg.acksExpectedL2 := getEntry(LineAddress).cacheL2.count();
+          }
+          enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Control;
+            out_msg.Destination := getEntry(LineAddress).cacheL2;
+            out_msg.Type := CoherenceMessageType:InvL2;
+            out_msg.Sender := in_msg.OriginalRequestorMachId;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_GetSL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:GetS_AckL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).cacheL2.add(in_msg.OriginalRequestorMachId);
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else {
+          trigger(Event:StallmemQueue_in, LineAddress, tbe);}
+      }
+    }
+  }
+  
+  in_port(fwdto_in, CoherenceMessage, fwdTo) {
+    if (fwdto_in.isReady(clockEdge())) {
+      peek (fwdto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "fwdto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        error("Invalid transition");
+      }
+    }
+  }
+  
+  in_port(respto_in, CoherenceMessage, respTo) {
+    if (respto_in.isReady(clockEdge())) {
+      peek (respto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "respto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        if (st == State:E_GetS) {
+          if (in_msg.Type == CoherenceMessageType:WBL2) {
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              if (is_invalid(tbe)) {
+                if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                  trigger(Event:allocTBE, LineAddress, tbe);
+                } else {
+                  DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                  respto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                  trigger(Event:Progress, LineAddress, tbe);
+                }
+              }
+              tbe.cl := in_msg.cl;
+              tbe.dirty := true;
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_GetS_WBL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on respto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              respto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:E_GetS);
+              DPRINTF(RubySlicc, "Popping %s %s on respto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              respto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrespto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M_GetS) {      
+          if (in_msg.Type == CoherenceMessageType:WBL2) {
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              if (is_invalid(tbe)) {
+                if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                  trigger(Event:allocTBE, LineAddress, tbe);
+                } else {
+                  DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                  respto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                  trigger(Event:Progress, LineAddress, tbe);
+                }
+              }
+              tbe.cl := in_msg.cl;
+              tbe.dirty := true;
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_GetS_WBL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on respto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              respto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:M_GetS);
+              DPRINTF(RubySlicc, "Popping %s %s on respto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              respto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrespto_in, LineAddress, tbe);
+          }
+        } else {
+          trigger(Event:Stallrespto_in, LineAddress, tbe);
+        }
+      }
+    }
+  }
+  
+  in_port(reqto_in, CoherenceMessage, reqTo) {
+    if (reqto_in.isReady(clockEdge())) {
+      peek (reqto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "reqto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        if (st == State:E) {
+          if (in_msg.Type == CoherenceMessageType:GetML2) {
+            enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:Fwd_GetML2;
+              out_msg.Sender := in_msg.Sender;
+            }
+            getEntry(LineAddress).ownerL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:M);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:deallocTBE, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2Ifetch) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:Fwd_GetSL2;
+              out_msg.Sender := in_msg.Sender;
+            }
+            getEntry(LineAddress).cacheL2.add(in_msg.Sender);
+            getEntry(LineAddress).cacheL2.add(getEntry(LineAddress).ownerL2);
+            setState(tbe, LineAddress, State:E_GetS);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:Fwd_GetSL2;
+              out_msg.Sender := in_msg.Sender;
+            }
+            getEntry(LineAddress).cacheL2.add(in_msg.Sender);
+            getEntry(LineAddress).cacheL2.add(getEntry(LineAddress).ownerL2);
+            setState(tbe, LineAddress, State:E_GetS);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:PutEL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutE_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:E);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutML2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              if (is_invalid(tbe)) {
+                if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                  trigger(Event:allocTBE, LineAddress, tbe);
+                } else {
+                  DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                  reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                  trigger(Event:Progress, LineAddress, tbe);
+                }
+              }
+              tbe.cl := in_msg.cl;
+              tbe.dirty := true;
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutM_AckL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_PutML2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:E);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutSL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutE_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:E);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallreqto_in, LineAddress, tbe);
+          }
+        } else if (st == State:I) {      
+          if (in_msg.Type == CoherenceMessageType:GetML2) {
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:I_GetML2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2Ifetch) {
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:I_GetSL2_1);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2) {
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:I_GetSL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:PutEL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutE_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutML2) {
+            enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:PutI_AckL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).cacheL2.count() == 0) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).cacheL2.count() != 0) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutSL2) {
+            enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:PutI_AckL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).cacheL2.count() == 0) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).cacheL2.count() != 0) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallreqto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M) {      
+          if (in_msg.Type == CoherenceMessageType:GetML2) {
+            enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:Fwd_GetML2;
+              out_msg.Sender := in_msg.Sender;
+            }
+            getEntry(LineAddress).ownerL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:M);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:deallocTBE, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2Ifetch) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:Fwd_GetSL2;
+              out_msg.Sender := in_msg.Sender;
+            }
+            getEntry(LineAddress).cacheL2.add(in_msg.Sender);
+            getEntry(LineAddress).cacheL2.add(getEntry(LineAddress).ownerL2);
+            setState(tbe, LineAddress, State:M_GetS);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(fwdfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:Fwd_GetSL2;
+              out_msg.Sender := in_msg.Sender;
+            }
+            getEntry(LineAddress).cacheL2.add(in_msg.Sender);
+            getEntry(LineAddress).cacheL2.add(getEntry(LineAddress).ownerL2);
+            setState(tbe, LineAddress, State:M_GetS);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:PutEL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              if (is_invalid(tbe)) {
+                if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                  trigger(Event:allocTBE, LineAddress, tbe);
+                } else {
+                  DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                  reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                  trigger(Event:Progress, LineAddress, tbe);
+                }
+              }
+              tbe.cl := in_msg.cl;
+              tbe.dirty := true;
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutM_AckL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_PutEL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:M);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutML2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              if (is_invalid(tbe)) {
+                if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                  trigger(Event:allocTBE, LineAddress, tbe);
+                } else {
+                  DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                  reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                  trigger(Event:Progress, LineAddress, tbe);
+                }
+              }
+              tbe.cl := in_msg.cl;
+              tbe.dirty := true;
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutM_AckL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_PutML2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:M);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutSL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              if (is_invalid(tbe)) {
+                if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                  trigger(Event:allocTBE, LineAddress, tbe);
+                } else {
+                  DPRINTF(RubySlicc, "recycling %s on reqto_in (addr: %#x)\n", st, LineAddress);
+                  reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                  trigger(Event:Progress, LineAddress, tbe);
+                }
+              }
+              tbe.cl := in_msg.cl;
+              tbe.dirty := true;
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutM_AckL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_PutSL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:M);
+              DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              reqto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallreqto_in, LineAddress, tbe);
+          }
+        } else if (st == State:S) {      
+          if (in_msg.Type == CoherenceMessageType:GetML2) {
+            if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender)) {
+              getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                  out_msg.addr := LineAddress;
+                  out_msg.Type := MemoryRequestType:MEMORY_READ;
+                  out_msg.Sender := in_msg.Sender;
+                  out_msg.MessageSize := MessageSizeType:Request_Control;
+                  out_msg.Len := 0;
+                }
+                setState(tbe, LineAddress, State:S_GetML2_0);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                  out_msg.addr := LineAddress;
+                  out_msg.Type := MemoryRequestType:MEMORY_READ;
+                  out_msg.Sender := in_msg.Sender;
+                  out_msg.MessageSize := MessageSizeType:Request_Control;
+                  out_msg.Len := 0;
+                }
+                setState(tbe, LineAddress, State:S_GetML2_1);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            else if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender) == false) {
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                  out_msg.addr := LineAddress;
+                  out_msg.Type := MemoryRequestType:MEMORY_READ;
+                  out_msg.Sender := in_msg.Sender;
+                  out_msg.MessageSize := MessageSizeType:Request_Control;
+                  out_msg.Len := 0;
+                }
+                setState(tbe, LineAddress, State:S_GetML2_2);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                  out_msg.addr := LineAddress;
+                  out_msg.Type := MemoryRequestType:MEMORY_READ;
+                  out_msg.Sender := in_msg.Sender;
+                  out_msg.MessageSize := MessageSizeType:Request_Control;
+                  out_msg.Len := 0;
+                }
+                setState(tbe, LineAddress, State:S_GetML2_3);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2) {
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:S_GetSL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:GetSL2Ifetch) {
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:S_GetSL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            reqto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:PutEL2) {
+            if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender)) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutS_AckL2;
+                out_msg.Sender := machineID;
+              }
+              getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                setState(tbe, LineAddress, State:I);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                setState(tbe, LineAddress, State:S);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+            }
+            else if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender) == false) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                setState(tbe, LineAddress, State:I);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                setState(tbe, LineAddress, State:S);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutML2) {
+            if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender)) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutS_AckL2;
+                out_msg.Sender := machineID;
+              }
+              getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                setState(tbe, LineAddress, State:I);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                setState(tbe, LineAddress, State:S);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+            }
+            else if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender) == false) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                setState(tbe, LineAddress, State:I);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                setState(tbe, LineAddress, State:S);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:PutSL2) {
+            if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender)) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutS_AckL2;
+                out_msg.Sender := machineID;
+              }
+              getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                setState(tbe, LineAddress, State:I);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                setState(tbe, LineAddress, State:S);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+            }
+            else if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender) == false) {
+              enqueue(respfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:PutI_AckL2;
+                out_msg.Sender := machineID;
+              }
+              if (getEntry(LineAddress).cacheL2.count() == 0) {
+                setState(tbe, LineAddress, State:I);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 0) {
+                setState(tbe, LineAddress, State:S);
+                DPRINTF(RubySlicc, "Popping %s %s on reqto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                reqto_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+              }
+            }
+          } else {
+            trigger(Event:Stallreqto_in, LineAddress, tbe);
+          }
+        } else {
+          trigger(Event:Stallreqto_in, LineAddress, tbe);
+        }
+      }
+    }
+  }
+  
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirActions
+  action(a_allocTBE, "aTBE", desc="Allocate TBE entry.") {
+    TBEs.allocate(address);
+    set_tbe(TBEs[address]);
+    tbe.dirty := false;
+  }
+  
+  action(a_deallocTBE, "dTBE", desc="Deallocate TBE entry.") {
+    if (is_valid(tbe)) {
+      TBEs.deallocate(address);
+      unset_tbe();
+    }
+  }
+  
+  action(popmemQueue_in, "pmemQueue_in0", desc="Pop the memQueue_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      memQueue_in.dequeue(clockEdge());
+  }
+  
+  action(recyclememQueue_in, "rmemQueue_in0", desc="Recycle the memQueue_in port") {
+    DPRINTF(RubySlicc, "Stalling memQueue_in (addr: %#x)\n", address);
+    memQueue_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(memQueue_in, address);
+  }
+  
+  action(popfwdto_in, "pfwdto_in0", desc="Pop the fwdto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      fwdto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclefwdto_in, "rfwdto_in0", desc="Recycle the fwdto_in port") {
+    DPRINTF(RubySlicc, "Stalling fwdto_in (addr: %#x)\n", address);
+    fwdto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(fwdto_in, address);
+  }
+  
+  action(popreqto_in, "preqto_in0", desc="Pop the reqto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      reqto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclereqto_in, "rreqto_in0", desc="Recycle the reqto_in port") {
+    DPRINTF(RubySlicc, "Stalling reqto_in (addr: %#x)\n", address);
+    reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(reqto_in, address);
+  }
+  
+  action(poprespto_in, "prespto_in0", desc="Pop the respto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      respto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclerespto_in, "rrespto_in0", desc="Recycle the respto_in port") {
+    DPRINTF(RubySlicc, "Stalling respto_in (addr: %#x)\n", address);
+    respto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(respto_in, address);
+  }
+  
+  action(empty, "e", desc="Empty action") {
+      // empty action; useful as SLICC requires valid transitions
+      // to be non-empty, but the actions being invoked can still be empty
+      // e.g. to simulate a z-stall
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirTransitions
+  
+  
+  transition({E, E_GetS, E_GetS_WBL2_0, E_PutML2_0, I, I_GetML2_0, I_GetSL2_0, M, M_GetS, M_GetS_WBL2_0, M_PutEL2_0, M_PutML2_0, M_PutSL2_0, S, S_GetML2_0, S_GetML2_1, S_GetML2_2, S_GetML2_3, S_GetSL2_0, I_GetSL2_1}, Stallfwdto_in) {
+      recyclefwdto_in;
+  }
+  
+  transition({E, E_GetS, E_GetS_WBL2_0, E_PutML2_0, I, I_GetML2_0, I_GetSL2_0, M, M_GetS, M_GetS_WBL2_0, M_PutEL2_0, M_PutML2_0, M_PutSL2_0, S, S_GetML2_0, S_GetML2_1, S_GetML2_2, S_GetML2_3, S_GetSL2_0, I_GetSL2_1}, StallmemQueue_in) {
+      recyclememQueue_in;
+  }
+  
+  transition({E, E_GetS, E_GetS_WBL2_0, E_PutML2_0, I, I_GetML2_0, I_GetSL2_0, M, M_GetS, M_GetS_WBL2_0, M_PutEL2_0, M_PutML2_0, M_PutSL2_0, S, S_GetML2_0, S_GetML2_1, S_GetML2_2, S_GetML2_3, S_GetSL2_0, I_GetSL2_1}, Stallreqto_in) {
+      recyclereqto_in;
+  }
+  
+  transition({E, E_GetS, E_GetS_WBL2_0, E_PutML2_0, I, I_GetML2_0, I_GetSL2_0, M, M_GetS, M_GetS_WBL2_0, M_PutEL2_0, M_PutML2_0, M_PutSL2_0, S, S_GetML2_0, S_GetML2_1, S_GetML2_2, S_GetML2_3, S_GetSL2_0, I_GetSL2_1}, Stallrespto_in) {
+      recyclerespto_in;
+  }
+  
+  transition({E, E_GetS, E_GetS_WBL2_0, E_PutML2_0, I, I_GetML2_0, I_GetSL2_0, M, M_GetS, M_GetS_WBL2_0, M_PutEL2_0, M_PutML2_0, M_PutSL2_0, S, S_GetML2_0, S_GetML2_1, S_GetML2_2, S_GetML2_3, S_GetSL2_0, I_GetSL2_1}, Progress) {
+      empty;
+  }
+  
+  transition({E, E_GetS, I, M, M_GetS, S}, allocTBE) {
+    a_allocTBE;
+  }
+  
+  transition({E, E_GetS, I, M, M_GetS, S}, deallocTBE) {
+    a_deallocTBE;
+  }
+}
+// EOF<directory>

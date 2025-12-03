@@ -1,0 +1,2177 @@
+//Backend.SLICC.ModularSLICC.dir.GenDirHeader
+machine(MachineType:Directory, "Directory protocol")
+:
+
+  DirectoryMemory *directory;
+  // The following latencies should be exposed as command-line parameters in a future update
+  Cycles toMemLatency := 1;
+  Cycles responseLatency := 6;
+  Cycles recycleLatency := 10;
+
+  // Required networks
+  MessageBuffer *requestToMemory;
+  MessageBuffer *responseFromMemory;
+
+  // Dynamic networks
+  MessageBuffer *fwdTo, network="From", virtual_network="6", vnet_type="fwd";
+  MessageBuffer *fwdFrom, network="To", virtual_network="6", vnet_type="fwd";
+  MessageBuffer *respTo, network="From", virtual_network="7", vnet_type="resp";
+  MessageBuffer *respFrom, network="To", virtual_network="7", vnet_type="resp";
+  MessageBuffer *reqTo, network="From", virtual_network="8", vnet_type="req";
+  MessageBuffer *reqFrom, network="To", virtual_network="8", vnet_type="req";
+
+  MessageBuffer *bisnpTo, network="From", virtual_network="0", vnet_type="bisnp";
+  MessageBuffer *bisnpFrom, network="To", virtual_network="0", vnet_type="bisnp";
+  MessageBuffer *birspTo, network="From", virtual_network="1", vnet_type="birsp";
+  MessageBuffer *birspFrom, network="To", virtual_network="1", vnet_type="birsp";
+
+  MessageBuffer *ndrTo, network="From", virtual_network="2", vnet_type="ndr";
+  MessageBuffer *ndrFrom, network="To", virtual_network="2", vnet_type="ndr";
+  MessageBuffer *drsTo, network="From", virtual_network="3", vnet_type="drs";
+  MessageBuffer *drsFrom, network="To", virtual_network="3", vnet_type="drs";
+
+  MessageBuffer *req2To, network="From", virtual_network="4", vnet_type="req2";
+  MessageBuffer *req2From, network="To", virtual_network="4", vnet_type="req2";
+  MessageBuffer *rwdTo, network="From", virtual_network="5", vnet_type="rwd";
+  MessageBuffer *rwdFrom, network="To", virtual_network="5", vnet_type="rwd";
+
+{
+  //Backend.SLICC.ModularSLICC.dir.GenDirStateDecl
+  state_declaration(State, desc="Directory states", default="Directory_State_I") {
+    E, AccessPermission:Maybe_Stale, desc="... TODO ...";
+    E_MemInv_A_SnpInv, AccessPermission:Busy, desc="... TODO ...";
+    E_MemRd_A_SnpInv, AccessPermission:Busy, desc="... TODO ...";
+    E_MemRd_S_SnpData, AccessPermission:Busy, desc="... TODO ...";
+    I, AccessPermission:Read_Write, desc="... TODO ...";
+    M, AccessPermission:Maybe_Stale, desc="... TODO ...";
+    M_MemInv_A_SnpInv, AccessPermission:Busy, desc="... TODO ...";
+    M_MemRd_A_SnpInv, AccessPermission:Busy, desc="... TODO ...";
+    M_MemRd_S_SnpData, AccessPermission:Busy, desc="... TODO ...";
+    S, AccessPermission:Read_Only, desc="... TODO ...";
+    S_MemInv_A_SnpInv, AccessPermission:Read_Only, desc="... TODO ...";
+    S_MemRd_A_SnpInv, AccessPermission:Read_Only, desc="... TODO ...";
+    E_MemInv_A_SnpInv_BIRspIL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    E_MemRd_A_SnpInv_BIRspIL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    E_MemRd_S_SnpData_BIRspIL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    E_MemRd_S_SnpData_BIRspSL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemInv_A_SnpInv_BIRspIL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemRd_A_SnpInv_BIRspIL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    M_MemRd_S_SnpData_BIRspIL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    M_MemRd_S_SnpData_BIRspSL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    S_MemInv_A_SnpInv_BIRspIL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    S_MemRd_A_SnpInv_BIRspIL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    E_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    E_MemWr_SL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    E_MemInv_A_SnpInv_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    E_MemRd_A_SnpInv_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    E_MemRd_S_SnpData_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    E_MemRd_S_SnpData_MemWr_SL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    I_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemWr_SL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemInv_A_SnpInv_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemRd_A_SnpInv_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemRd_S_SnpData_MemWr_IL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    M_MemRd_S_SnpData_MemWr_SL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    I_MemInv_A_SnpInvL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    I_MemRd_A_SnpInvL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    I_MemRd_S_SnpDataL2_0, AccessPermission:Read_Write, desc="... TODO ...";
+    I_MemRd_S_SnpDataL2_1, AccessPermission:Read_Write, desc="... TODO ...";
+    S_MemRd_A_SnpInvL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+    S_MemRd_S_SnpDataL2_0, AccessPermission:Read_Only, desc="... TODO ...";
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirEvents
+  enumeration(Event, desc="Directory events") {
+    StallmemQueue_in, desc="Stall the memQueue_in port.";
+    
+    Stallbirspto_in, desc="Stall the birspto_in port.";
+    
+    Stallbisnpto_in, desc="Stall the bisnpto_in port.";
+    
+    Stalldrsto_in, desc="Stall the drsto_in port.";
+    
+    Stallfwdto_in, desc="Stall the fwdto_in port.";
+    
+    Stallndrto_in, desc="Stall the ndrto_in port.";
+    
+    Stallreq2to_in, desc="Stall the req2to_in port.";
+    
+    Stallreqto_in, desc="Stall the reqto_in port.";
+    
+    Stallrespto_in, desc="Stall the respto_in port.";
+    
+    Stallrwdto_in, desc="Stall the rwdto_in port.";
+    
+    allocTBE, desc="Allocate a new TBE.";
+    
+    deallocTBE, desc="Deallocate a TBE.";
+    
+    Progress, desc="Progress, please!";
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirStruct
+  structure(Entry, desc="Stored variables of the Directory machine", interface="AbstractCacheEntry", main="false") {
+    State DirectoryState, desc="Directory state";
+    NetDest cacheL2, desc="... TODO ...";
+    MachineID ownerL2, desc="... TODO ...";
+    DataBlock cl, desc="... TODO ...";
+    bool dirty, desc="... TODO ...";
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirTBE
+  structure(TBE, desc="TBE entries for Directory machine") {
+    State TBEState,       desc="Transient State";
+    MachineID requestorL2, desc="... TODO ...";
+  }
+  
+  structure(TBETable, external="yes"){
+    TBE lookup(Addr);
+    void allocate(Addr);
+    void deallocate(Addr);
+    bool isPresent(Addr);
+    bool areNSlotsAvailable(int, Tick);
+  }
+  
+  TBETable TBEs, template="<Directory_TBE>", constructor="m_number_of_TBEs";
+  
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirStaticFns
+  Tick clockEdge();
+  Tick cyclesToTicks(Cycles c);
+  Cycles ticksToCycles(Tick t);
+  void set_tbe(TBE a);
+  void unset_tbe();
+  void wakeUpAllBuffers(Addr a);
+  
+  Entry getEntry(Addr LineAddress), return_by_pointer="yes" {
+    Entry entry := static_cast(Entry, "pointer", directory[LineAddress]);
+    if (is_invalid(entry)) {
+      entry := static_cast(Entry, "pointer", directory.allocate(LineAddress, new Entry));
+    }
+    return entry;
+  }
+  
+  State getState(TBE tbe, Addr LineAddress) {
+    if (is_valid(tbe)) {
+      return tbe.TBEState;
+    } else if (directory.isPresent(LineAddress)) {
+      return getEntry(LineAddress).DirectoryState;
+    } else {
+      return State:I;
+    }
+  }
+  
+  void setState(TBE tbe, Addr LineAddress, State state) {
+    DPRINTF(RubySlicc, "%s -> %s (addr: %#x)\n", getState(tbe, LineAddress), state, LineAddress);
+    //if (state != getState(tbe, LineAddress)) {
+    //  wakeUpAllBuffers(LineAddress);
+    //}
+    if (is_valid(tbe)) {
+      tbe.TBEState := state;
+    }
+    if (directory.isPresent(LineAddress)) {
+      getEntry(LineAddress).DirectoryState := state;
+    }
+  }
+  
+  AccessPermission getAccessPermission(Addr LineAddress) {
+    TBE tbe := TBEs[LineAddress];
+    if (is_valid(tbe)) {
+      return Directory_State_to_permission(tbe.TBEState);
+    } else if (directory.isPresent(LineAddress)) {
+      return Directory_State_to_permission(getEntry(LineAddress).DirectoryState);
+    } else {
+      return AccessPermission:NotPresent;
+    }
+  }
+  
+  void setAccessPermission(Addr LineAddress, State state) {
+    if (directory.isPresent(LineAddress)) {
+      getEntry(LineAddress).changePermission(Directory_State_to_permission(state));
+    }
+  }
+  
+  void functionalRead(Addr addr, Packet *pkt) {
+    Entry cache_entry := getEntry(addr);
+    if (is_valid(cache_entry) && cache_entry.dirty) {                                   
+      testAndRead(addr, cache_entry.cl, pkt);                                   
+    } else {                                                                                                          
+      functionalMemoryRead(pkt);
+    }  
+  }
+  
+  int functionalWrite(Addr addr, Packet *pkt) {
+    int num_functional_writes := 0;                                                                                
+    Entry cache_entry := getEntry(addr);
+    if (is_valid(cache_entry) && cache_entry.dirty) {                                                
+      num_functional_writes := num_functional_writes +                                
+        testAndWrite(addr, cache_entry.cl, pkt);                                                                            
+    }                                                                           
+    num_functional_writes := num_functional_writes + functionalMemoryWrite(pkt);
+    return num_functional_writes;
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirOutPorts
+  out_port(memQueue_out, MemoryMsg, requestToMemory);
+  out_port(birspfrom_out, CoherenceMessage, birspFrom);
+  out_port(bisnpfrom_out, CoherenceMessage, bisnpFrom);
+  out_port(drsfrom_out, CoherenceMessage, drsFrom);
+  out_port(fwdfrom_out, CoherenceMessage, fwdFrom);
+  out_port(ndrfrom_out, CoherenceMessage, ndrFrom);
+  out_port(req2from_out, CoherenceMessage, req2From);
+  out_port(reqfrom_out, CoherenceMessage, reqFrom);
+  out_port(respfrom_out, CoherenceMessage, respFrom);
+  out_port(rwdfrom_out, CoherenceMessage, rwdFrom);
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirInPorts
+  in_port(memQueue_in, MemoryMsg, responseFromMemory, rank=0) {
+    if (memQueue_in.isReady(clockEdge())) {
+      peek(memQueue_in, MemoryMsg) {
+        Addr LineAddress := in_msg.addr;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        if (st == State:E_MemInv_A_SnpInv_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemRd_A_SnpInv_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemRd_S_SnpData_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemRd_S_SnpData_BIRspSL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemInv_A_SnpInv_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemRd_A_SnpInv_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemRd_S_SnpData_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).cacheL2.add(tbe.requestorL2);
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemRd_S_SnpData_BIRspSL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_MemInv_A_SnpInv_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_MemRd_A_SnpInv_BIRspIL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          setState(tbe, LineAddress, State:I);
+          getEntry(LineAddress).dirty := false;
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemWr_SL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          getEntry(LineAddress).cacheL2.add(in_msg.OriginalRequestorMachId);
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemInv_A_SnpInv_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:E_MemInv_A_SnpInv);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:Progress, LineAddress, tbe);
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemRd_A_SnpInv_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:E_MemRd_A_SnpInv);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:Progress, LineAddress, tbe);
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemRd_S_SnpData_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:E_MemRd_S_SnpData);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:Progress, LineAddress, tbe);
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:E_MemRd_S_SnpData_MemWr_SL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:E_MemRd_S_SnpData);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:Progress, LineAddress, tbe);
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:I);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:I);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemWr_SL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemInv_A_SnpInv_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:M_MemInv_A_SnpInv);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:Progress, LineAddress, tbe);
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemRd_A_SnpInv_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:M_MemRd_A_SnpInv);
+          
+          memQueue_in.dequeue(clockEdge());
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+          trigger(Event:Progress, LineAddress, tbe);
+        } else if (st == State:M_MemRd_S_SnpData_MemWr_IL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:M_MemRd_S_SnpData);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:Progress, LineAddress, tbe);
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:M_MemRd_S_SnpData_MemWr_SL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_WB) {
+          
+          getEntry(LineAddress).dirty := false;
+          setState(tbe, LineAddress, State:M_MemRd_S_SnpData);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:Progress, LineAddress, tbe);
+          //trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_MemInv_A_SnpInvL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_MemRd_A_SnpInvL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_MemRd_S_SnpDataL2_1 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          setState(tbe, LineAddress, State:E);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:I_MemRd_S_SnpDataL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          //if (in_msg.ReadX) {
+          //  getEntry(LineAddress).ownerL2 := in_msg.OriginalRequestorMachId;
+          //  setState(tbe, LineAddress, State:E);
+          //} else {
+            getEntry(LineAddress).cacheL2.add(in_msg.OriginalRequestorMachId);
+            setState(tbe, LineAddress, State:S);
+          //}
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_MemRd_A_SnpInvL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(tbe.requestorL2);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+          getEntry(LineAddress).cacheL2.clear();
+          setState(tbe, LineAddress, State:M);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else if (st == State:S_MemRd_S_SnpDataL2_0 
+              && in_msg.Type == MemoryRequestType:MEMORY_READ) {
+          enqueue(drsfrom_out, CoherenceMessage, responseLatency) {
+            out_msg.LineAddress := LineAddress;
+            out_msg.MessageSize := MessageSizeType:Data;
+            out_msg.Destination.add(in_msg.OriginalRequestorMachId);
+            out_msg.Type := CoherenceMessageType:MemDataL2;
+            out_msg.Sender := machineID;
+            out_msg.cl := in_msg.DataBlk;
+          }
+          getEntry(LineAddress).cacheL2.add(in_msg.OriginalRequestorMachId);
+          setState(tbe, LineAddress, State:S);
+          
+          memQueue_in.dequeue(clockEdge());
+          trigger(Event:deallocTBE, LineAddress, tbe);
+        } else {
+          trigger(Event:StallmemQueue_in, LineAddress, tbe);}
+      }
+    }
+  }
+  
+  in_port(fwdto_in, CoherenceMessage, fwdTo) {
+    if (fwdto_in.isReady(clockEdge())) {
+      peek (fwdto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "fwdto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        error("Invalid transition");
+      }
+    }
+  }
+  
+  in_port(respto_in, CoherenceMessage, respTo) {
+    if (respto_in.isReady(clockEdge())) {
+      peek (respto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "respto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        error("Invalid transition");
+      }
+    }
+  }
+  
+  in_port(reqto_in, CoherenceMessage, reqTo) {
+    if (reqto_in.isReady(clockEdge())) {
+      peek (reqto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "reqto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        error("Invalid transition");
+      }
+    }
+  }
+  
+  in_port(ndrto_in, CoherenceMessage, ndrTo) {
+    if (ndrto_in.isReady(clockEdge())) {
+      peek (ndrto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "ndrto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        error("Invalid transition");
+      }
+    }
+  }
+  
+  in_port(drsto_in, CoherenceMessage, drsTo) {
+    if (drsto_in.isReady(clockEdge())) {
+      peek (drsto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "drsto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        error("Invalid transition");
+      }
+    }
+  }
+  
+  in_port(bisnpto_in, CoherenceMessage, bisnpTo) {
+    if (bisnpto_in.isReady(clockEdge())) {
+      peek (bisnpto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "bisnpto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        error("Invalid transition");
+      }
+    }
+  }
+  
+  in_port(birspto_in, CoherenceMessage, birspTo, rank=1) {
+    if (birspto_in.isReady(clockEdge())) {
+      peek (birspto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "birspto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        if (st == State:E_MemInv_A_SnpInv) {
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_EL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:E_MemInv_A_SnpInv_BIRspIL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else if (st == State:E_MemRd_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_EL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:E_MemRd_A_SnpInv_BIRspIL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else if (st == State:E_MemRd_S_SnpData) {      
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            getEntry(LineAddress).cacheL2.add(tbe.requestorL2);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_SL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:E_MemRd_S_SnpData_BIRspIL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:BIRspSL2) {
+            getEntry(LineAddress).cacheL2.add(in_msg.Sender);
+            getEntry(LineAddress).cacheL2.add(tbe.requestorL2);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_SL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:E_MemRd_S_SnpData_BIRspSL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M_MemInv_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_EL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:M_MemInv_A_SnpInv_BIRspIL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M_MemRd_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_EL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:M_MemRd_A_SnpInv_BIRspIL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M_MemRd_S_SnpData) {      
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_SL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:M_MemRd_S_SnpData_BIRspIL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:BIRspSL2) {
+            getEntry(LineAddress).cacheL2.add(in_msg.Sender);
+            getEntry(LineAddress).cacheL2.add(tbe.requestorL2);
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(tbe.requestorL2);
+              out_msg.Type := CoherenceMessageType:Cmp_SL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:M_MemRd_S_SnpData_BIRspSL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            birspto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else if (st == State:S_MemInv_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).cacheL2.count() == 0) {
+              enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(tbe.requestorL2);
+                out_msg.Type := CoherenceMessageType:Cmp_EL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_READ;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Request_Control;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:S_MemInv_A_SnpInv_BIRspIL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              birspto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).cacheL2.count() != 0) {
+              if (getEntry(LineAddress).cacheL2.count() == 1) {
+                if (getEntry(LineAddress).cacheL2.isElement(tbe.requestorL2)) {
+                  enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+                    out_msg.LineAddress := LineAddress;
+                    out_msg.MessageSize := MessageSizeType:Control;
+                    out_msg.Destination.add(tbe.requestorL2);
+                    out_msg.Type := CoherenceMessageType:Cmp_EL2;
+                    out_msg.Sender := machineID;
+                  }
+                  getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+                  getEntry(LineAddress).cacheL2.clear();
+                  setState(tbe, LineAddress, State:M);
+                  DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                  birspto_in.dequeue(clockEdge());
+                  trigger(Event:deallocTBE, LineAddress, tbe);
+                }
+                else if (getEntry(LineAddress).cacheL2.isElement(tbe.requestorL2) == false) {
+                  setState(tbe, LineAddress, State:S_MemInv_A_SnpInv);
+                  DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                  birspto_in.dequeue(clockEdge());
+                  trigger(Event:Progress, LineAddress, tbe);
+                }
+              }
+              else if (getEntry(LineAddress).cacheL2.count() != 1) {
+                setState(tbe, LineAddress, State:S_MemInv_A_SnpInv);
+                DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                birspto_in.dequeue(clockEdge());
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else if (st == State:S_MemRd_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIRspIL2) {
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).cacheL2.count() == 0) {
+              enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(tbe.requestorL2);
+                out_msg.Type := CoherenceMessageType:Cmp_EL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_READ;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Request_Control;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:S_MemRd_A_SnpInv_BIRspIL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              birspto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).cacheL2.count() != 0) {
+              setState(tbe, LineAddress, State:S_MemRd_A_SnpInv);
+              DPRINTF(RubySlicc, "Popping %s %s on birspto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              birspto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallbirspto_in, LineAddress, tbe);
+          }
+        } else {
+          trigger(Event:Stallbirspto_in, LineAddress, tbe);
+        }
+      }
+    }
+  }
+  
+  in_port(rwdto_in, CoherenceMessage, rwdTo, rank=2) {
+    if (rwdto_in.isReady(clockEdge())) {
+      peek (rwdto_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "rwdto_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        if (st == State:E) {
+          if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              setState(tbe, LineAddress, State:E);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_SL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_MemWr_SL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              setState(tbe, LineAddress, State:E);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else if (st == State:E_MemInv_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:E_MemInv_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_MemInv_A_SnpInv_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:E_MemInv_A_SnpInv);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else if (st == State:E_MemRd_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:E_MemRd_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_MemRd_A_SnpInv_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:E_MemRd_A_SnpInv);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else if (st == State:E_MemRd_S_SnpData) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:E_MemRd_S_SnpData);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_MemRd_S_SnpData_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:E_MemRd_S_SnpData);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_SL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:E_MemRd_S_SnpData_MemWr_SL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:E_MemRd_S_SnpData);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+//        } else if (st == State:I) {      
+//          if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+//            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+//              out_msg.LineAddress := LineAddress;
+//              out_msg.MessageSize := MessageSizeType:Control;
+//              out_msg.Destination.add(in_msg.Sender);
+//              out_msg.Type := CoherenceMessageType:CmpL2;
+//              out_msg.Sender := machineID;
+//            }
+//            getEntry(LineAddress).cl := in_msg.cl;
+//            getEntry(LineAddress).dirty := true;
+//            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+//            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+//              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+//                out_msg.addr := LineAddress;
+//                out_msg.Type := MemoryRequestType:MEMORY_WB;
+//                out_msg.Sender := in_msg.Sender;
+//                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+//                out_msg.DataBlk := in_msg.cl;
+//                out_msg.Len := 0;
+//              }
+//              setState(tbe, LineAddress, State:I_MemWr_IL2_0);
+//              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+//              rwdto_in.dequeue(clockEdge());
+//              trigger(Event:Progress, LineAddress, tbe);
+//            }
+//            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+//              setState(tbe, LineAddress, State:I);
+//              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+//              rwdto_in.dequeue(clockEdge());
+//              trigger(Event:deallocTBE, LineAddress, tbe);
+//            }
+//          } else {
+//            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+//          }
+        } else if (st == State:M) {      
+          if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              setState(tbe, LineAddress, State:M);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_SL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_MemWr_SL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              setState(tbe, LineAddress, State:M);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M_MemInv_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:M_MemInv_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_MemInv_A_SnpInv_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:M_MemInv_A_SnpInv);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M_MemRd_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:M_MemRd_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_MemRd_A_SnpInv_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:M_MemRd_A_SnpInv);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else if (st == State:M_MemRd_S_SnpData) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:M_MemRd_S_SnpData);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_MemRd_S_SnpData_MemWr_IL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:M_MemRd_S_SnpData);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemWr_SL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cl := in_msg.cl;
+            getEntry(LineAddress).dirty := true;
+            if (in_msg.Sender == getEntry(LineAddress).ownerL2) {
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_WB;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Writeback_Data;
+                out_msg.DataBlk := in_msg.cl;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:M_MemRd_S_SnpData_MemWr_SL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (in_msg.Sender != getEntry(LineAddress).ownerL2) {
+              setState(tbe, LineAddress, State:M_MemRd_S_SnpData);
+              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              rwdto_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+//        } else if (st == State:S) {      
+//          if (in_msg.Type == CoherenceMessageType:MemWr_IL2) {
+//            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+//              out_msg.LineAddress := LineAddress;
+//              out_msg.MessageSize := MessageSizeType:Control;
+//              out_msg.Destination.add(in_msg.Sender);
+//              out_msg.Type := CoherenceMessageType:CmpL2;
+//              out_msg.Sender := machineID;
+//            }
+//            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+//            if (getEntry(LineAddress).cacheL2.count() == 0) {
+//              setState(tbe, LineAddress, State:I);
+//              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+//              rwdto_in.dequeue(clockEdge());
+//              trigger(Event:deallocTBE, LineAddress, tbe);
+//            }
+//            else if (getEntry(LineAddress).cacheL2.count() != 0) {
+//              setState(tbe, LineAddress, State:S);
+//              DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+//              rwdto_in.dequeue(clockEdge());
+//              trigger(Event:deallocTBE, LineAddress, tbe);
+//            }
+//          } else {
+//            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+//          }
+        } else if (st == State:S_MemInv_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:S_MemInv_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else if (st == State:S_MemRd_A_SnpInv) {      
+          if (in_msg.Type == CoherenceMessageType:BIConflictL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:BIConflictAckL2;
+              out_msg.Sender := machineID;
+            }
+            setState(tbe, LineAddress, State:S_MemRd_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on rwdto_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            rwdto_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallrwdto_in, LineAddress, tbe);
+          }
+        } else {
+          trigger(Event:Stallrwdto_in, LineAddress, tbe);
+        }
+      }
+    }
+  }
+  
+  in_port(req2to_in, CoherenceMessage, req2To, rank=3) {
+    if (req2to_in.isReady(clockEdge())) {
+      peek (req2to_in, CoherenceMessage, block_on="LineAddress") {
+        Addr LineAddress := in_msg.LineAddress;
+        TBE tbe := TBEs[LineAddress];
+        State st := getState(tbe, LineAddress);
+        DPRINTF(RubySlicc, "req2to_in: %s %s %s (addr: %#x)\n", in_msg.Type, in_msg.Sender, st, LineAddress);
+        if (st == State:E) {
+          if (in_msg.Type == CoherenceMessageType:MemClnEvct_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              setState(tbe, LineAddress, State:E);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemInv_A_SnpInvL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:BISnpInvL2;
+              out_msg.Sender := machineID;
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:E_MemInv_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_A_SnpInvL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:BISnpInvL2;
+              out_msg.Sender := machineID;
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:E_MemRd_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_S_SnpDataL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:BISnpDataL2;
+              out_msg.Sender := machineID;
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:E_MemRd_S_SnpData);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallreq2to_in, LineAddress, tbe);
+          }
+        } else if (st == State:I) {      
+          if (in_msg.Type == CoherenceMessageType:MemClnEvct_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemInv_A_SnpInvL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:Cmp_EL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:I_MemInv_A_SnpInvL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_A_SnpInvL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:Cmp_EL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+            }
+            setState(tbe, LineAddress, State:I_MemRd_A_SnpInvL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_S_SnpDataL2) {
+            if (in_msg.exclusiveL1) {
+              enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:Cmp_EL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_READ;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Request_Control;
+                out_msg.Len := 0;
+                out_msg.ReadX := true;
+              }
+              setState(tbe, LineAddress, State:I_MemRd_S_SnpDataL2_1);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            } else {
+              enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(in_msg.Sender);
+                out_msg.Type := CoherenceMessageType:Cmp_SL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_READ;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Request_Control;
+                out_msg.Len := 0;
+                //out_msg.ReadX := false;
+              }
+              setState(tbe, LineAddress, State:I_MemRd_S_SnpDataL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else {
+            trigger(Event:Stallreq2to_in, LineAddress, tbe);
+          }
+        } else if (st == State:M) {      
+          if (in_msg.Type == CoherenceMessageType:MemClnEvct_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).ownerL2 == in_msg.Sender) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).ownerL2 != in_msg.Sender) {
+              setState(tbe, LineAddress, State:M);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemInv_A_SnpInvL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:BISnpInvL2;
+              out_msg.Sender := machineID;
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:M_MemInv_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_A_SnpInvL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:BISnpInvL2;
+              out_msg.Sender := machineID;
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:M_MemRd_A_SnpInv);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);  
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_S_SnpDataL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(getEntry(LineAddress).ownerL2);
+              out_msg.Type := CoherenceMessageType:BISnpDataL2;
+              out_msg.Sender := machineID;
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            setState(tbe, LineAddress, State:M_MemRd_S_SnpData);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallreq2to_in, LineAddress, tbe);
+          }
+        } else if (st == State:S) {      
+          if (in_msg.Type == CoherenceMessageType:MemClnEvct_IL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:CmpL2;
+              out_msg.Sender := machineID;
+            }
+            getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            if (getEntry(LineAddress).cacheL2.count() == 0) {
+              setState(tbe, LineAddress, State:I);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).cacheL2.count() != 0) {
+              setState(tbe, LineAddress, State:S);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:deallocTBE, LineAddress, tbe);
+            }  
+          } else if (in_msg.Type == CoherenceMessageType:MemInv_A_SnpInvL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            if (getEntry(LineAddress).cacheL2.isElement(tbe.requestorL2)) {
+              getEntry(LineAddress).cacheL2.remove(tbe.requestorL2);
+            }
+            if (getEntry(LineAddress).cacheL2.count() != 0) {
+                enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+                  out_msg.LineAddress := LineAddress;
+                  out_msg.MessageSize := MessageSizeType:Control;
+                  out_msg.Destination := getEntry(LineAddress).cacheL2;
+                  out_msg.Type := CoherenceMessageType:BISnpInvL2;
+                  out_msg.Sender := machineID;
+                }
+                getEntry(LineAddress).cacheL2.add(tbe.requestorL2);
+                setState(tbe, LineAddress, State:S_MemInv_A_SnpInv);
+                DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                req2to_in.dequeue(clockEdge());
+                trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).cacheL2.count() == 0) {
+                enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+                  out_msg.LineAddress := LineAddress;
+                  out_msg.MessageSize := MessageSizeType:Control;
+                  out_msg.Destination.add(tbe.requestorL2);
+                  out_msg.Type := CoherenceMessageType:Cmp_EL2;
+                  out_msg.Sender := machineID;
+                }
+                getEntry(LineAddress).ownerL2 := tbe.requestorL2;
+                getEntry(LineAddress).cacheL2.clear();
+                setState(tbe, LineAddress, State:M);
+                DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+                req2to_in.dequeue(clockEdge());
+                trigger(Event:deallocTBE, LineAddress, tbe);
+            }
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_A_SnpInvL2) {
+            if (is_invalid(tbe)) {
+              if (TBEs.areNSlotsAvailable(1, clockEdge())) {
+                trigger(Event:allocTBE, LineAddress, tbe);
+              } else {
+                DPRINTF(RubySlicc, "recycling %s on req2to_in (addr: %#x)\n", st, LineAddress);
+                req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+                trigger(Event:Progress, LineAddress, tbe);
+              }
+            }
+            tbe.requestorL2 := in_msg.Sender;
+            if (getEntry(LineAddress).cacheL2.isElement(in_msg.Sender)) {
+              getEntry(LineAddress).cacheL2.remove(in_msg.Sender);
+            }
+            if (getEntry(LineAddress).cacheL2.count() != 0) {
+              enqueue(bisnpfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination := getEntry(LineAddress).cacheL2;
+                out_msg.Type := CoherenceMessageType:BISnpInvL2;
+                out_msg.Sender := machineID;
+              }
+              setState(tbe, LineAddress, State:S_MemRd_A_SnpInv);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+            else if (getEntry(LineAddress).cacheL2.count() == 0) {
+              enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+                out_msg.LineAddress := LineAddress;
+                out_msg.MessageSize := MessageSizeType:Control;
+                out_msg.Destination.add(tbe.requestorL2);
+                out_msg.Type := CoherenceMessageType:Cmp_EL2;
+                out_msg.Sender := machineID;
+              }
+              enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+                out_msg.addr := LineAddress;
+                out_msg.Type := MemoryRequestType:MEMORY_READ;
+                out_msg.Sender := in_msg.Sender;
+                out_msg.MessageSize := MessageSizeType:Request_Control;
+                out_msg.Len := 0;
+              }
+              setState(tbe, LineAddress, State:S_MemRd_A_SnpInvL2_0);
+              DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+              req2to_in.dequeue(clockEdge());
+              trigger(Event:Progress, LineAddress, tbe);
+            }
+          } else if (in_msg.Type == CoherenceMessageType:MemRd_S_SnpDataL2) {
+            enqueue(ndrfrom_out, CoherenceMessage, responseLatency) {
+              out_msg.LineAddress := LineAddress;
+              out_msg.MessageSize := MessageSizeType:Control;
+              out_msg.Destination.add(in_msg.Sender);
+              out_msg.Type := CoherenceMessageType:Cmp_SL2;
+              out_msg.Sender := machineID;
+            }
+            enqueue(memQueue_out, MemoryMsg, toMemLatency) {
+              out_msg.addr := LineAddress;
+              out_msg.Type := MemoryRequestType:MEMORY_READ;
+              out_msg.Sender := in_msg.Sender;
+              out_msg.MessageSize := MessageSizeType:Request_Control;
+              out_msg.Len := 0;
+              //out_msg.ReadX := false;
+            }
+            setState(tbe, LineAddress, State:S_MemRd_S_SnpDataL2_0);
+            DPRINTF(RubySlicc, "Popping %s %s on req2to_in (addr: %#x)\n", in_msg.Type, in_msg.Sender, LineAddress);
+            req2to_in.dequeue(clockEdge());
+            trigger(Event:Progress, LineAddress, tbe);
+          } else {
+            trigger(Event:Stallreq2to_in, LineAddress, tbe);
+          }
+        } else {
+          trigger(Event:Stallreq2to_in, LineAddress, tbe);
+        }
+      }
+    }
+  }
+  
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirActions
+  action(a_allocTBE, "aTBE", desc="Allocate TBE entry.") {
+    TBEs.allocate(address);
+    set_tbe(TBEs[address]);
+  }
+  
+  action(a_deallocTBE, "dTBE", desc="Deallocate TBE entry.") {
+    if (is_valid(tbe)) {
+      TBEs.deallocate(address);
+      unset_tbe();
+    }
+  }
+  
+  action(popmemQueue_in, "pmemQueue_in0", desc="Pop the memQueue_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      memQueue_in.dequeue(clockEdge());
+  }
+  
+  action(recyclememQueue_in, "rmemQueue_in0", desc="Recycle the memQueue_in port") {
+    DPRINTF(RubySlicc, "Stalling memQueue_in (addr: %#x)\n", address);
+    memQueue_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(memQueue_in, address);
+  }
+  
+  action(popbirspto_in, "pbirspto_in0", desc="Pop the birspto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      birspto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclebirspto_in, "rbirspto_in0", desc="Recycle the birspto_in port") {
+    DPRINTF(RubySlicc, "Stalling birspto_in (addr: %#x)\n", address);
+    birspto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(birspto_in, address);
+  }
+  
+  action(popbisnpto_in, "pbisnpto_in0", desc="Pop the bisnpto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      bisnpto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclebisnpto_in, "rbisnpto_in0", desc="Recycle the bisnpto_in port") {
+    DPRINTF(RubySlicc, "Stalling bisnpto_in (addr: %#x)\n", address);
+    bisnpto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(bisnpto_in, address);
+  }
+  
+  action(popdrsto_in, "pdrsto_in0", desc="Pop the drsto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      drsto_in.dequeue(clockEdge());
+  }
+  
+  action(recycledrsto_in, "rdrsto_in0", desc="Recycle the drsto_in port") {
+    DPRINTF(RubySlicc, "Stalling drsto_in (addr: %#x)\n", address);
+    drsto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(drsto_in, address);
+  }
+  
+  action(popfwdto_in, "pfwdto_in0", desc="Pop the fwdto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      fwdto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclefwdto_in, "rfwdto_in0", desc="Recycle the fwdto_in port") {
+    DPRINTF(RubySlicc, "Stalling fwdto_in (addr: %#x)\n", address);
+    fwdto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(fwdto_in, address);
+  }
+  
+  action(popndrto_in, "pndrto_in0", desc="Pop the ndrto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      ndrto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclendrto_in, "rndrto_in0", desc="Recycle the ndrto_in port") {
+    DPRINTF(RubySlicc, "Stalling ndrto_in (addr: %#x)\n", address);
+    ndrto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(ndrto_in, address);
+  }
+  
+  action(popreq2to_in, "preq2to_in0", desc="Pop the req2to_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      req2to_in.dequeue(clockEdge());
+  }
+  
+  action(recyclereq2to_in, "rreq2to_in0", desc="Recycle the req2to_in port") {
+    DPRINTF(RubySlicc, "Stalling req2to_in (addr: %#x)\n", address);
+    req2to_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(req2to_in, address);
+  }
+  
+  action(popreqto_in, "preqto_in0", desc="Pop the reqto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      reqto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclereqto_in, "rreqto_in0", desc="Recycle the reqto_in port") {
+    DPRINTF(RubySlicc, "Stalling reqto_in (addr: %#x)\n", address);
+    reqto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(reqto_in, address);
+  }
+  
+  action(poprespto_in, "prespto_in0", desc="Pop the respto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      respto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclerespto_in, "rrespto_in0", desc="Recycle the respto_in port") {
+    DPRINTF(RubySlicc, "Stalling respto_in (addr: %#x)\n", address);
+    respto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(respto_in, address);
+  }
+  
+  action(poprwdto_in, "prwdto_in0", desc="Pop the rwdto_in queue.") {
+      // Sometimes we need to be able to pop a queue/in_port from within a transition
+      // rather than from within the in_port itself. Thus, we need an action for this,
+      // since transitions cannot execute non-action functions.
+      rwdto_in.dequeue(clockEdge());
+  }
+  
+  action(recyclerwdto_in, "rrwdto_in0", desc="Recycle the rwdto_in port") {
+    DPRINTF(RubySlicc, "Stalling rwdto_in (addr: %#x)\n", address);
+    rwdto_in.recycle(clockEdge(), cyclesToTicks(recycleLatency));
+    //stall_and_wait(rwdto_in, address);
+  }
+  
+  action(empty, "e", desc="Empty action") {
+      // empty action; useful as SLICC requires valid transitions
+      // to be non-empty, but the actions being invoked can still be empty
+      // e.g. to simulate a z-stall
+  }
+  
+  //Backend.SLICC.ModularSLICC.dir.GenDirTransitions
+  
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 ,I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallbirspto_in) {
+      recyclebirspto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallbisnpto_in) {
+      recyclebisnpto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stalldrsto_in) {
+      recycledrsto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallfwdto_in) {
+      recyclefwdto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, StallmemQueue_in) {
+      recyclememQueue_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallndrto_in) {
+      recyclendrto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallreq2to_in) {
+      recyclereq2to_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallreqto_in) {
+      recyclereqto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallrespto_in) {
+      recyclerespto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Stallrwdto_in) {
+      recyclerwdto_in;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemInv_A_SnpInv_BIRspIL2_0, E_MemInv_A_SnpInv_MemWr_IL2_0, E_MemRd_A_SnpInv, E_MemRd_A_SnpInv_BIRspIL2_0, E_MemRd_A_SnpInv_MemWr_IL2_0, E_MemRd_S_SnpData, E_MemRd_S_SnpData_BIRspIL2_0, E_MemRd_S_SnpData_BIRspSL2_0, E_MemRd_S_SnpData_MemWr_IL2_0, E_MemRd_S_SnpData_MemWr_SL2_0, E_MemWr_IL2_0, E_MemWr_SL2_0, I, I_MemInv_A_SnpInvL2_0, I_MemRd_A_SnpInvL2_0, I_MemRd_S_SnpDataL2_1 , I_MemRd_S_SnpDataL2_0, I_MemWr_IL2_0, M, M_MemInv_A_SnpInv, M_MemInv_A_SnpInv_BIRspIL2_0, M_MemInv_A_SnpInv_MemWr_IL2_0, M_MemRd_A_SnpInv, M_MemRd_A_SnpInv_BIRspIL2_0, M_MemRd_A_SnpInv_MemWr_IL2_0, M_MemRd_S_SnpData, M_MemRd_S_SnpData_BIRspIL2_0, M_MemRd_S_SnpData_BIRspSL2_0, M_MemRd_S_SnpData_MemWr_IL2_0, M_MemRd_S_SnpData_MemWr_SL2_0, M_MemWr_IL2_0, M_MemWr_SL2_0, S, S_MemInv_A_SnpInv, S_MemInv_A_SnpInv_BIRspIL2_0, S_MemRd_A_SnpInv, S_MemRd_A_SnpInvL2_0, S_MemRd_A_SnpInv_BIRspIL2_0, S_MemRd_S_SnpDataL2_0}, Progress) {
+      empty;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemRd_A_SnpInv, E_MemRd_S_SnpData, I, M, M_MemInv_A_SnpInv, M_MemRd_A_SnpInv, M_MemRd_S_SnpData, S, S_MemInv_A_SnpInv, S_MemRd_A_SnpInv}, allocTBE) {
+    a_allocTBE;
+  }
+  
+  transition({E, E_MemInv_A_SnpInv, E_MemRd_A_SnpInv, E_MemRd_S_SnpData, I, M, M_MemInv_A_SnpInv, M_MemRd_A_SnpInv, M_MemRd_S_SnpData, S, S_MemInv_A_SnpInv, S_MemRd_A_SnpInv}, deallocTBE) {
+    a_deallocTBE;
+  }
+}
+// EOF<directory>

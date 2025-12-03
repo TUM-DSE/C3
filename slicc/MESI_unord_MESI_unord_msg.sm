@@ -1,0 +1,72 @@
+//Backend.SLICC.ModularSLICC.msg.GenMsgEnum
+enumeration(CoherenceMessageType, desc="Types of coherence messages") {
+  Fwd_GetML1, desc="Fwd_GetML1";
+  Fwd_GetML2, desc="Fwd_GetML2";
+  Fwd_GetSL1, desc="Fwd_GetSL1";
+  Fwd_GetSL2, desc="Fwd_GetSL2";
+  GetML1, desc="GetML1";
+  GetML1store, desc="GetML1store";
+  GetML2, desc="GetML2";
+  GetML2store, desc="GetML2store";
+  GetM_Ack_ADL1, desc="GetM_Ack_ADL1";
+  GetM_Ack_ADL2, desc="GetM_Ack_ADL2";
+  GetM_Ack_DL1, desc="GetM_Ack_DL1";
+  GetM_Ack_DL2, desc="GetM_Ack_DL2";
+  GetSL1, desc="GetSL1";
+  GetSL1load, desc="GetSL1load";
+  GetSL1store, desc="GetSL1store";
+  GetSL1Ifetch, desc="GetSL1Ifetch";
+  GetSL2, desc="GetSL2";
+  GetSL2load, desc="GetSL2load";
+  GetSL2store, desc="GetSL2store";
+  GetSL2Ifetch, desc="GetSL2Ifetch";
+  GetS_AckL1, desc="GetS_AckL1";
+  GetS_AckL2, desc="GetS_AckL2";
+  InvL1, desc="InvL1";
+  InvL2, desc="InvL2";
+  Inv_AckL1, desc="Inv_AckL1";
+  Inv_AckL2, desc="Inv_AckL2";
+  PutEL1, desc="PutEL1";
+  PutEL2, desc="PutEL2";
+  PutE_AckL1, desc="PutE_AckL1";
+  PutE_AckL2, desc="PutE_AckL2";
+  PutIL1, desc="PutIL1";
+  PutIL2, desc="PutIL2";
+  PutI_AckL1, desc="PutI_AckL1";
+  PutI_AckL2, desc="PutI_AckL2";
+  PutML1, desc="PutML1";
+  PutML2, desc="PutML2";
+  PutM_AckL1, desc="PutM_AckL1";
+  PutM_AckL2, desc="PutM_AckL2";
+  PutSL1, desc="PutSL1";
+  PutSL2, desc="PutSL2";
+  PutS_AckL1, desc="PutS_AckL1";
+  PutS_AckL2, desc="PutS_AckL2";
+  WBL1, desc="WBL1";
+  WBL2, desc="WBL2";
+}
+
+//Backend.SLICC.ModularSLICC.msg.GenMsgStruct
+structure(CoherenceMessage, desc="...", interface="Message") {
+  Addr LineAddress,             desc="Physical address for this request";
+  CoherenceMessageType Type,   desc="Type of request (GetS, GetM, PutM, etc)";
+  MachineID Sender,            desc="Node who initiated the request";
+  NetDest Destination,         desc="Multicast destination mask";
+  MessageSizeType MessageSize, desc="size category of the message";
+  DataBlock cl, desc="Cache line / Data cl";
+  int acksExpectedL1, desc="Integer acksExpectedL1";
+  int acksExpectedL2, desc="Integer acksExpectedL2";
+
+
+  bool functionalRead(Packet *pkt) {
+    // A check on message type should appear here so that only those
+    // messages that contain data
+    return testAndRead(LineAddress, cl, pkt);
+  }
+
+  bool functionalWrite(Packet *pkt) {
+    // No check on message type required since the protocol should read
+    // data block from only those messages that contain valid data
+    return testAndWrite(LineAddress, cl, pkt);
+  }
+}
