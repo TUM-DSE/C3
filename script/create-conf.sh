@@ -67,7 +67,7 @@ declare -A parsec_switched=(
     ["raytrace"]="Yes"
     ["streamcluster"]="Yes"
     ["swaptions"]="No"
-    ["vips"]="Yes"
+    ["vips"]="No"
     ["x264"]="No"
 )
 
@@ -93,7 +93,13 @@ declare -A parsec_binary=(
     ["ferret"]="ferret"
 )
 
+# Apps that use gcc-pthreads instead of gcc
+declare -A parsec_gcc_pthreads=(
+    ["vips"]="yes"
+)
+
 for app_dir in "${BENCHMARKS_DIR}/parsec-benchmark/pkgs/apps/"*/inst/amd64-linux.gcc/bin \
+               "${BENCHMARKS_DIR}/parsec-benchmark/pkgs/apps/"*/inst/amd64-linux.gcc-pthreads/bin \
                "${BENCHMARKS_DIR}/parsec-benchmark/pkgs/kernels/"*/inst/amd64-linux.gcc/bin; do
     [[ -d "$app_dir" ]] || continue
     
@@ -105,6 +111,15 @@ for app_dir in "${BENCHMARKS_DIR}/parsec-benchmark/pkgs/apps/"*/inst/amd64-linux
     
     # Skip if not in our list
     [[ -z "${parsec_cores[$name]:-}" ]] && continue
+    
+    # Check if this app needs gcc-pthreads
+    if [[ -n "${parsec_gcc_pthreads[$name]:-}" ]]; then
+        # Skip gcc version, use gcc-pthreads
+        [[ "$app_dir" == *"amd64-linux.gcc/bin" ]] && continue
+    else
+        # Skip gcc-pthreads version, use gcc
+        [[ "$app_dir" == *"gcc-pthreads/bin" ]] && continue
+    fi
     
     rel_path=$(echo "$app_dir" | sed "s|${BENCHMARKS_DIR}/||")
     # Use explicit binary name if defined, otherwise use app name
@@ -144,18 +159,18 @@ echo "" >> "${CONFIG_FILE}"
 echo "[splash]" >> "${CONFIG_FILE}"
 
 declare -A splash_cores=(
-    ["barnes"]=12
+    ["barnes"]=14
     ["cholesky"]=8
     ["fft"]=12
     ["fmm"]=12
     ["lu-cont"]=8
-    ["lu-ncont"]=8
+    ["lu-ncont"]=10
     ["ocean-ncont"]=8
     ["radiosity"]=14
     ["radix"]=8
     ["raytrace"]=8
     ["volrend"]=8
-    ["volrend-npl"]=8
+    ["volrend-npl"]=10
     ["water-nsquared"]=8
     ["water-spatial"]=8
 )
@@ -282,7 +297,7 @@ declare -A phoenix_cores=(
     ["matrix_multiply"]=10
     ["pca"]=30
     ["string_match"]=8
-    ["word_count"]=8
+    ["word_count"]=12
 )
 
 declare -A phoenix_switched=(

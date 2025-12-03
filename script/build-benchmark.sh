@@ -15,6 +15,22 @@ fix_permissions() {
 build_parsec() {
     local PAR_DIR="${BENCHMARKS_DIR}/parsec-benchmark"
     
+    # Apps to build (only the ones we use)
+    local PARSEC_APPS=(
+        "blackscholes"
+        "bodytrack"
+        "canneal"
+        "dedup"
+        "facesim"
+        "ferret"
+        "freqmine"
+        "raytrace"
+        "streamcluster"
+        "swaptions"
+        "vips"
+        "x264"
+    )
+    
     echo "==> Building PARSEC..."
     fix_permissions "${PAR_DIR}"
     chmod +x "${PAR_DIR}/bin/"* 2>/dev/null || true
@@ -22,7 +38,17 @@ build_parsec() {
     cd "${PAR_DIR}"
     export PARSECDIR="${PAR_DIR}"
     export PATH="${PAR_DIR}/bin:${PATH}"
-    parsecmgmt -a build -c gcc
+    
+    # Build only the apps we need
+    for app in "${PARSEC_APPS[@]}"; do
+        echo "    Building ${app}..."
+        # Use gcc-pthreads for vips (needs --enable-debug=yes)
+        if [[ "$app" == "vips" ]]; then
+            parsecmgmt -a build -p "${app}" -c gcc-pthreads
+        else
+            parsecmgmt -a build -p "${app}" -c gcc
+        fi
+    done
     
     echo "==> Extracting PARSEC inputs..."
     extract_parsec_inputs
