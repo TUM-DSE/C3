@@ -1,0 +1,41 @@
+/*
+
+
+Read Me File Framed by: Sukarn Agarwal (Email: sagarwa2@ed.ac.uk)
+
+
+*/
+
+
+// Replace the files from the gem5's (placed at src/mem/ruby/protocol/ and src/mem/ruby/structures/) CTA_Hetero folder with the original files and then build the gem5 with the following command:
+
+
+sudo docker run --rm -v $PWD/gem5:/gem5 -w /gem5 gcn-gpu2 scons -sQ -j4 build/GCN3_X86/gem5.opt
+
+
+// Command to create the binary, from the source litmus test file
+
+sudo docker run --rm -v ${PWD}:${PWD} -w ${PWD} -u $UID:$GID gcn-gpu2 make
+
+
+
+// Gem5 command to run the litmus test
+
+sudo docker run -u $UID:$GID --volume $(pwd):$(pwd) -w $(pwd) gcn-gpu2 gem5/build/GCN3_X86/gem5.opt --stats-file=stats_MP1_CTA_2048runs gem5/configs/example/apu_se.py --cpu-type=DerivO3CPU -n 16 -c gem5-resources/gpu/Heterogenous_Litmus_Test/MP/MP1-CTA-F/bin/MP_Ver1_Rel_Acq_GPU_Scope -o 4
+
+
+// Results Obtained from the terminal window
+
+// MP1 CTA (known as MP1-CTA-F in the paper)
+
+
+Validating...Fail!
+Count (a:0 and b:0): 745
+Count (a:1 and b:0): 9
+Count (a:0 and b:1): 2
+Count (a:1 and b:1): 1292
+Count (r0:2 and r1:2): 0
+Num Valid test: 2046
+Num Invalid test: 2
+
+

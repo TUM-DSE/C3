@@ -1,0 +1,33 @@
+/*
+
+
+Read Me File Framed by: Sukarn Agarwal (Email: sagarwa2@ed.ac.uk)
+
+
+*/
+
+
+// Command to create the binary, from the source litmus test file
+
+sudo docker run --rm -v ${PWD}:${PWD} -w ${PWD} -u $UID:$GID gcn-gpu2 make
+
+
+
+// Gem5 command to run the IRIW GPU litmus test
+sudo docker run -u $UID:$GID --volume $(pwd):$(pwd) -w $(pwd) gcn-gpu2 gem5/build/GCN3_X86/gem5.opt --stats-file=stats_MP_Fence_GPU_only_2048runs gem5/configs/example/apu_se.py --cpu-type=DerivO3CPU -n 3 -c gem5-resources/gpu/GPU_Litmus_test/MP/MP-sys-F/bin/MP_RelAcq_WO_Atomic_Fence
+
+
+
+// Results Obtained from the terminal window
+
+// MP Fence (known as MP-sys-F in the paper)
+
+Validating...Success!
+Count (a:0 and b:0): 0
+Count (a:1 and b:0): 215
+Count (a:0 and b:1): 0
+Count (a:1 and b:1): 1833
+Count (a:2 and b:2): 0
+Num Valid test: 2048
+Num Invalid test: 0
+

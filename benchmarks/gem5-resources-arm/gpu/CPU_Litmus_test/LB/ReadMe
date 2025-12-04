@@ -1,0 +1,33 @@
+/*
+
+
+Read Me File Framed by: Sukarn Agarwal (Email: sagarwa2@ed.ac.uk)
+
+
+*/
+
+
+// Command to create the binary, from the source litmus test file
+
+sudo docker run --rm -v ${PWD}:${PWD} -w ${PWD} -u $UID:$GID gcn-gpu2 make
+
+
+
+// Gem5 command to run the LB CPU litmus test
+
+sudo docker run -u $UID:$GID --volume $(pwd):$(pwd) -w $(pwd) gcn-gpu2 gem5/build/GCN3_X86/gem5.opt --stats-file=stats_LB_CPU_only_10000runs gem5/configs/example/apu_se.py --cpu-type=DerivO3CPU -n 16 -c gem5-resources/gpu/CPU_Litmus_test/LB/bin/LB_Relax -o 8
+
+
+// Results Obtained from the terminal window
+
+// LB (known as LB-sys in the paper)
+
+Validating...Success!
+Count (a:0 and b:0): 97
+Count (a:1 and b:0): 9866
+Count (a:0 and b:1): 37
+Count (a:1 and b:1): 0
+Count (r0:2 and r1:2): 0
+Num Valid test: 10000
+Num Invalid test: 0
+

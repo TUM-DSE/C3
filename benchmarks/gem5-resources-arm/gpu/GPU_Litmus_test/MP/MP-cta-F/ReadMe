@@ -1,0 +1,38 @@
+/*
+
+
+Read Me File Framed by: Sukarn Agarwal (Email: sagarwa2@ed.ac.uk)
+
+
+*/
+
+
+// Replace the files from the gem5's (placed at src/mem/ruby/protocol/ and src/mem/ruby/structures/) CTA_GPU_only folder with the original files and then build the gem5 with the following command:
+
+sudo docker run --rm -v $PWD/gem5:/gem5 -w /gem5 gcn-gpu2 scons -sQ -j4 build/GCN3_X86/gem5.opt
+
+
+// Command to create the binary, from the source litmus test file
+
+sudo docker run --rm -v ${PWD}:${PWD} -w ${PWD} -u $UID:$GID gcn-gpu2 make
+
+
+
+// Gem5 command to run the litmus test
+ 
+sudo docker run -u $UID:$GID --volume $(pwd):$(pwd) -w $(pwd) gcn-gpu2 gem5/build/GCN3_X86/gem5.opt --stats-file=stats_MP_CTA_GPU_only_2048runs gem5/configs/example/apu_se.py --cpu-type=DerivO3CPU -n 3 -c gem5-resources/gpu/GPU_Litmus_test/MP/MP-cta-F/bin/MP_RelAcq_Wg_Scope
+
+
+
+// Results Obtained from the stats file: stats_MP_CTA_GPU_only_2048runs
+
+
+// MP CTA (known as MP-CTA-F in the paper)
+
+passTest5858          566                       # Number of litmus Test that are passed with a: 1 and b: 1 (Unspecified)
+passTest1058            0                       # Number of litmus Test that are passed with a: 0 and b: 1 (Unspecified)
+passTest5810          292                       # Number of litmus Test that are passed with a: 1 and b: 0 (Unspecified)
+passTest1010         1185                       # Number of litmus Test that are passed with a: 0 and b: 0 (Unspecified)
+passTest             2043                       # Number of litmus test that are passed with MP CTA scope (Unspecified)
+failTest             5                          # Number of litmus Test that are failed with MP CTA scope (Unspecified) 
+
