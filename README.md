@@ -25,8 +25,10 @@ This repository contains the models and workloads for evaluating CXL-based cache
 - [Build gem5](#build-gem5)
 - [Build Benchmarks](#build-benchmarks)
 - [Run Experiments](#run-experiments)
+  - [Figure 9: ARM Heterogeneous MCM](#figure-9-arm-heterogeneous-mcm)
   - [Figure 10: Execution Time Comparison](#figure-10-execution-time-comparison)
   - [Figure 11: Miss Latency Breakdown](#figure-11-miss-latency-breakdown)
+  - [Litmus Tests](#litmus-tests)
 
 ---
 
@@ -84,19 +86,32 @@ C-3-Artifact/
 ├── gem5/                    # gem5 simulator source
 ├── slicc/                   # SLICC protocol definitions
 ├── benchmarks/              # Benchmark suites
-│   ├── parsec-benchmark/    # PARSEC 3.0
-│   ├── Splash-4/            # Splash-4
-│   └── phoenix/             # Phoenix
+│   ├── parsec-benchmark/    # PARSEC 3.0 (x86)
+│   ├── Splash-4/            # Splash-4 (x86)
+│   ├── phoenix/             # Phoenix (x86)
+│   ├── parsec-benchmark-arm/# PARSEC 3.0 (ARM)
+│   ├── Splash-4-arm/        # Splash-4 (ARM)
+│   └── phoenix-arm/         # Phoenix (ARM)
 ├── script/                  # Build and run scripts
 │   ├── build-gem5.sh        # Build gem5 with all protocols
-│   ├── build-benchmark.sh   # Build all benchmarks
-│   ├── create-conf.sh       # Generate experiment configurations
-│   ├── run-fig10.sh         # Run Figure 10 experiments
-│   ├── extract-stats.sh     # Extract statistics from results
-│   └── plot_fig10.py        # Generate Figure 10 plot
+│   ├── build-benchmark.sh   # Build x86 benchmarks
+│   ├── build-benchmark-arm.sh # Build ARM benchmarks
+│   ├── create-conf.sh       # Generate x86 experiment configurations
+│   ├── create-conf-arm.sh   # Generate ARM experiment configurations
+│   ├── run-fig9.sh          # Run Figure 9 experiments (ARM)
+│   ├── run-fig10.sh         # Run Figure 10 experiments (x86)
+│   ├── run-fig11.sh         # Run Figure 11 experiments
+│   ├── run-litmus.sh        # Run ARM litmus tests
+│   ├── extract-stats.sh     # Extract x86 statistics
+│   ├── extract-stats-arm.sh # Extract ARM statistics
+│   ├── plot_fig9.py         # Generate Figure 9 plot
+│   ├── plot_fig10.py        # Generate Figure 10 plot
+│   └── plot_fig11.py        # Generate Figure 11 plot
 ├── setup/                   # Protocol setup scripts
+│   ├── setup.py             # x86 setup
+│   ├── setup-litmus.py      # ARM litmus test setup
+│   └── litmus-test-mcm-ARM.conf # Litmus test configurations
 └── data/                    # Output directory (created at runtime)
-   
 ```
 
 ---
@@ -156,6 +171,58 @@ The script automatically:
 ---
 
 ## Run Experiments
+
+### Figure 9: ARM Heterogeneous MCM
+
+Figure 9 evaluates heterogeneous memory consistency models (MCM) on ARM architecture, comparing three configurations:
+
+- **ARM-ARM**: Both clusters use ARM relaxed memory model
+- **ARM-TSO**: One cluster uses ARM, another uses TSO-enforced
+- **TSO-TSO**: Both clusters use TSO-enforced memory model
+
+**Prerequisites**: Build gem5 for ARM and ARM benchmarks:
+
+```bash
+./script/build-gem5.sh ARM           # Build ARM gem5 variants
+./script/build-benchmark-arm.sh      # Build ARM benchmarks
+```
+
+**Step 1**: Generate ARM configuration files:
+
+```bash
+./script/create-conf-arm.sh
+```
+
+**Step 2**: Run experiments:
+
+```bash
+./script/run-fig9.sh
+```
+
+**Filtering options**:
+```bash
+./script/run-fig9.sh splash                    # Run Splash-4 only
+./script/run-fig9.sh splash barnes             # Run single application
+./script/run-fig9.sh splash barnes arm_arm     # Run specific MCM config
+```
+
+**Output**:
+```
+data/fig_9/
+├── gem5.output/           # Raw simulation outputs
+│   └── {suite}/{app}/{protocol}/{mcm}/
+├── summary/               # Extracted statistics (CSV)
+└── plot/
+    └── fig9_arm_mcm.pdf
+```
+
+**Manual plot regeneration**:
+```bash
+./script/extract-stats-arm.sh
+python3 ./script/plot_fig9.py
+```
+
+---
 
 ### Figure 10: Execution Time Comparison
 
@@ -235,4 +302,51 @@ data/fig_11/
 
 ---
 
->>>>>>> aebcaad0 (added README)
+### Litmus Tests
+
+Litmus tests validate the correctness of memory consistency model implementations on ARM.
+
+**Prerequisites**: Build gem5 for ARM:
+
+```bash
+./script/build-gem5.sh ARM
+```
+
+**Run all litmus tests**:
+
+```bash
+./script/run-litmus.sh
+```
+
+**Run a specific test**:
+
+```bash
+./script/run-litmus.sh IRIW_atomic
+./script/run-litmus.sh MP_dmb.sys
+./script/run-litmus.sh SB_dmb.sy_po
+```
+
+**List available tests**:
+
+```bash
+./script/run-litmus.sh --list
+```
+
+**Environment variables**:
+```bash
+CORES=4 REMOTE_LATENCY=10 MAX_PARALLEL=4 ./script/run-litmus.sh
+```
+
+**Output**:
+```
+data/litmus/
+├── gem5.output/           # Raw simulation outputs per test
+│   ├── IRIW_atomic/
+│   ├── MP_dmb.sys/
+│   └── ...
+└── logs/                  # Execution logs
+    ├── IRIW_atomic.log
+    └── ...
+```
+
+---
