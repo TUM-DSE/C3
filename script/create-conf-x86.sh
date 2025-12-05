@@ -170,7 +170,7 @@ declare -A splash_cores=(
     ["radix"]=8
     ["raytrace"]=14
     ["volrend"]=12
-    ["volrend-npl"]=8
+    ["volrend-npl"]=10
     ["water-nsquared"]=8
     ["water-spatial"]=8
 )
@@ -204,7 +204,7 @@ declare -A splash_args=(
     ["radix"]="RADIX -p8 -n200000"
     ["raytrace"]="RAYTRACE -p8 -m34 inputs/teapot.env"
     ["volrend"]="VOLREND 8 inputs/head-scaleddown4 2"
-    ["volrend-npl"]="VOLREND-NPL 8 inputs/head-scaleddown4 2"
+    ["volrend-npl"]="VOLREND-NPL 8 inputs/head-scaleddown4 1"
     ["water-nsquared"]="WATER-NSQUARED"
     ["water-spatial"]="WATER-SPATIAL"
 )
