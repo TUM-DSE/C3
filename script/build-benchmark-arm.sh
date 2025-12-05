@@ -55,12 +55,70 @@ build_parsec_arm() {
     export PARSECDIR="${PAR_DIR}"
     export PATH="${PAR_DIR}/bin:${PATH}"
 
-        # Download inputs if not present
-    if [[ ! -d "${PAR_DIR}/pkgs/apps/blackscholes/inputs" ]]; then
-        echo "    Downloading PARSEC inputs..."
+    # Check if inputs need to be downloaded
+    # We check for the downloaded tar.gz file which is the source of all inputs
+    local input_archive="${PAR_DIR}/parsec-3.0-input-sim.tar.gz"
+    local need_download=false
+    
+    if [[ ! -f "${input_archive}" ]]; then
+        echo "    Input archive not found: ${input_archive}"
+        need_download=true
+    else
+        # Verify all apps have their input_test.tar extracted
+        for app in "${PARSEC_APPS[@]}"; do
+            local app_input=""
+            # Check in apps/ first, then kernels/
+            if [[ -d "${PAR_DIR}/pkgs/apps/${app}" ]]; then
+                app_input="${PAR_DIR}/pkgs/apps/${app}/inputs/input_test.tar"
+            elif [[ -d "${PAR_DIR}/pkgs/kernels/${app}" ]]; then
+                app_input="${PAR_DIR}/pkgs/kernels/${app}/inputs/input_test.tar"
+            fi
+            
+            if [[ -n "${app_input}" && ! -f "${app_input}" ]]; then
+                echo "    Missing input for ${app}: ${app_input}"
+                need_download=true
+                break
+            fi
+        done
+    fi
+    
+    if [[ "${need_download}" == "true" ]]; then
+        echo "    Downloading and extracting PARSEC inputs..."
         chmod +x "${PAR_DIR}/get-inputs" 2>/dev/null || true
         "${PAR_DIR}/get-inputs" "${PAR_DIR}" "${PAR_DIR}"
+        
+        # Verify download succeeded - check archive exists
+        if [[ ! -f "${input_archive}" ]]; then
+            echo "ERROR: Failed to download PARSEC inputs."
+            echo "Expected file: ${input_archive}"
+            echo "Please check network connection or download manually from:"
+            echo "  https://github.com/cirosantilli/parsec-benchmark/releases/download/3.0/parsec-3.0-input-sim.tar.gz"
+            exit 1
+        fi
+        
+        # Verify all apps now have inputs
+        local missing_inputs=()
+        for app in "${PARSEC_APPS[@]}"; do
+            local app_input=""
+            if [[ -d "${PAR_DIR}/pkgs/apps/${app}" ]]; then
+                app_input="${PAR_DIR}/pkgs/apps/${app}/inputs/input_test.tar"
+            elif [[ -d "${PAR_DIR}/pkgs/kernels/${app}" ]]; then
+                app_input="${PAR_DIR}/pkgs/kernels/${app}/inputs/input_test.tar"
+            fi
+            
+            if [[ -n "${app_input}" && ! -f "${app_input}" ]]; then
+                missing_inputs+=("${app}")
+            fi
+        done
+        
+        if [[ ${#missing_inputs[@]} -gt 0 ]]; then
+            echo "ERROR: Missing inputs for: ${missing_inputs[*]}"
+            echo "The input archive may be corrupted or incomplete."
+            exit 1
+        fi
     fi
+    
+    echo "    All PARSEC ARM inputs verified."
     
     # Build dependencies first (for ferret)
     echo "    Building dependencies (gsl, libjpeg)..."
