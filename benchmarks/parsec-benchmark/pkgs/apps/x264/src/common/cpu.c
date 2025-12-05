@@ -272,7 +272,7 @@ void x264_emms( void )
 int x264_cpu_num_processors( void )
 {
 #if !defined(HAVE_PTHREAD)
-    return 1;
+    return 16;
 
 #elif defined(_WIN32)
     return pthread_num_processors_np();
@@ -285,7 +285,7 @@ int x264_cpu_num_processors( void )
     sched_getaffinity( 0, sizeof(p_aff), &p_aff );
     for( np = 0, bit = 0; bit < sizeof(p_aff); bit++ )
         np += (((uint8_t *)&p_aff)[bit / 8] >> (bit % 8)) & 1;
-    return np;
+    return 16;
 
 #elif defined(SYS_BEOS)
     system_info info;
@@ -302,6 +302,6 @@ int x264_cpu_num_processors( void )
     return numberOfCPUs;
 
 #else
-    return 1;
+    return 16;
 #endif
 }

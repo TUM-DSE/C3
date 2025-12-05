@@ -4,4 +4,3 @@
 
 # Default parallelization is pthreads
 source ${PARSECDIR}/pkgs/apps/x264/parsec/gcc-pthreads.bldconf
-

@@ -632,14 +632,18 @@ x264_t *x264_encoder_open   ( x264_param_t *param )
 
     if( x264_validate_parameters( h ) < 0 )
     {
+        if (h != NULL) {
         x264_free( h );
+        h = NULL; }
         return NULL;
     }
 
     if( h->param.psz_cqm_file )
         if( x264_cqm_parse_file( h, h->param.psz_cqm_file ) < 0 )
         {
-            x264_free( h );
+        if (h != NULL) {
+        x264_free( h );
+        h = NULL; }
             return NULL;
         }
 
@@ -693,7 +697,9 @@ x264_t *x264_encoder_open   ( x264_param_t *param )
 
     if( x264_cqm_init( h ) < 0 )
     {
+        if (h != NULL) {
         x264_free( h );
+        h = NULL; }
         return NULL;
     }
 
@@ -793,7 +799,9 @@ x264_t *x264_encoder_open   ( x264_param_t *param )
         else
         {
             x264_log( h, X264_LOG_ERROR, "can't write to fdec.yuv\n" );
-            x264_free( h );
+        if (h != NULL) {
+        x264_free( h );
+        h = NULL; }
             return NULL;
         }
     }

@@ -42,7 +42,7 @@ int main (int argc, char* argv[])
 	PARSE_ARGS parse_args;
 	parse_args.Add_Integer_Argument ("-restart", 0);
 	parse_args.Add_Integer_Argument ("-lastframe", 300);
-	parse_args.Add_Integer_Argument ("-threads", 1);
+	parse_args.Add_Integer_Argument ("-threads", 16);
 	parse_args.Add_Option_Argument ("-timing");
 	parse_args.Parse (argc, argv);
 

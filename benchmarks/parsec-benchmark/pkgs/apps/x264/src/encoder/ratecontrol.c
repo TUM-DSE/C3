@@ -7,7 +7,7 @@
  *          Michael Niedermayer <michaelni@gmx.at>
  *          Gabriel Bouvigne <gabriel.bouvigne@joost.com>
  *          Jason Garrett-Glaser <darkshikari@gmail.com>
- *          Måns Rullgård <mru@mru.ath.cx>
+ *          Mï¿½ns Rullgï¿½rd <mru@mru.ath.cx>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -709,7 +709,7 @@ void x264_ratecontrol_delete( x264_t *h )
             for( i=1; i<rc->i_zones; i++ )
                 if( rc->zones[i].param != rc->zones[0].param )
                     x264_free( rc->zones[i].param );
-        x264_free( rc->zones );
+        //x264_free( rc->zones );
     }
     x264_free( rc );
 }

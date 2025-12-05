@@ -1,5 +1,9 @@
 *.tar
 *.tar.gz
+*.gmo
+*.log
+*.o
+
 *~
 *.swp
 /log
@@ -14,6 +18,7 @@ run
 # info
 /pkgs/libs/gsl/src/doc/gsl-ref.info*
 /pkgs/tools/libtool/src/doc/libtool.info*
+/pkgs/libs/gsl/src/doc/*
 
 # libtool doc timestap
 /pkgs/tools/libtool/src/doc/stamp-vti

@@ -84,8 +84,8 @@ THREAD_POOL()
 	std::cout << "THREAD_POOL: Initializing condition variables" << std::endl;
 	char* threads_environment = getenv ("PHYSBAM_THREADS");
 
-	if (threads_environment) number_of_threads = atoi (threads_environment);
-	else number_of_threads = 2;
+	if (threads_environment) number_of_threads = 16;
+	else number_of_threads = 16;
 
 #ifdef ALAMERE_PTHREADS
 	std::cout << "Initializing Alamere Threads" << std::endl;

@@ -121,7 +121,7 @@ public:
     assert(threads >= 1);
 
     // Free resources.
-    clean();
+    //clean();
 
     typedef MultiThreadedTaskQueue* pMultiThreadedTaskQueue;
     m_threads   = threads;

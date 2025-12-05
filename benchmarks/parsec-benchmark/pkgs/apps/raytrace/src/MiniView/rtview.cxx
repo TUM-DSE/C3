@@ -484,14 +484,21 @@ int main(int argc, char* argv[])
 #endif
     int frame = 0;
     do {
+      cout << "Entering in render ..." << endl << flush;
       render();
+      cout << "Finishing render ..." << endl << flush;
       frame++;
+      cout << "Frame: " << frame << std::endl;
+      cout << "Do while condition: " << !(__builtin_expect(framesToRender > 0,0) && frame >= framesToRender) << endl << flush;
     } while(!(__builtin_expect(framesToRender > 0,0) && frame >= framesToRender));
 #ifdef ENABLE_PARSEC_HOOKS
     __parsec_roi_end();
 #endif
     cout << "Done" << endl << flush;
+
   }
+
+
 
   return 0;
 }

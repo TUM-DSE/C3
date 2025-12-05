@@ -204,12 +204,12 @@ im_concurrency_get( void )
 	/* Tell the threads system how much concurrency we expect.
 	 */
 	if( im__concurrency > 0 )
-		nthr = im__concurrency;
+		nthr = 16;
 	else if( (str = g_getenv( IM_CONCURRENCY )) && 
 		(x = atoi( str )) > 0 )
-		nthr = x;
+		nthr = 16;
 	else 
-		nthr = get_num_processors();
+		nthr = 16;
 
 	if( nthr < 1 || nthr > IM_MAX_THREADS ) {
 		nthr = IM_CLIP( 1, nthr, IM_MAX_THREADS );
@@ -656,7 +656,7 @@ vips_threadpool_new( VipsImage *im )
 	pool->allocate = NULL;
 	pool->work = NULL;
 	pool->allocate_lock = g_mutex_new();
-	pool->nthr = im_concurrency_get();
+	pool->nthr = 16;
 	pool->thr = NULL;
 	im_semaphore_init( &pool->finish, 0, "finish" );
 	im_semaphore_init( &pool->tick, 0, "tick" );

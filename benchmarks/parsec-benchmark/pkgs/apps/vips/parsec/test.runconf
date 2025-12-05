@@ -16,7 +16,8 @@
 run_exec="bin/vips"
 
 # VIPS expects the number of threads in an environment variable
-export IM_CONCURRENCY=${NTHREADS}
+# export IM_CONCURRENCY=${NTHREADS}
+export IM_CONCURRENCY=16
 
 # Arguments to use
 run_args="im_benchmark barbados_256x288.v output.v"
