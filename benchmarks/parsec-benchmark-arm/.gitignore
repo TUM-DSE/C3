@@ -4,3 +4,34 @@ obj/
 inst/
 run/
 log/
+
+*.tar
+*.tar.gz
+*.gmo
+*.log
+*.o
+
+*~
+*.swp
+/log
+/parsec-3.0
+/pkgs/libs/gsl/src/doc/gsl-ref.info*
+/pkgs/tools/libtool/src/doc/libtool.info*
+autom4te.cache
+inst
+obj
+run
+
+# info
+/pkgs/libs/gsl/src/doc/gsl-ref.info*
+/pkgs/tools/libtool/src/doc/libtool.info*
+/pkgs/libs/gsl/src/doc/*
+
+# libtool doc timestap
+/pkgs/tools/libtool/src/doc/stamp-vti
+/pkgs/tools/libtool/src/doc/version.texi
+
+# Ignore leftover present in the tars.
+/bin/.#parsecmgmt.1.6
+/toolkit/hpt/loggroup1.old/
+/toolkit/hpt/loggroup2.old/

@@ -1,0 +1,25 @@
+*.o
+*.a
+lib/
+# Binaries
+phoenix-2.0/tests/histogram/histogram
+phoenix-2.0/tests/histogram/histogram-seq
+phoenix-2.0/tests/histogram/histogram-pthread
+phoenix-2.0/tests/kmeans/kmeans
+phoenix-2.0/tests/kmeans/kmeans-seq
+phoenix-2.0/tests/kmeans/kmeans-pthread
+phoenix-2.0/tests/linear_regression/linear_regression
+phoenix-2.0/tests/linear_regression/linear_regression-seq
+phoenix-2.0/tests/linear_regression/linear_regression-pthread
+phoenix-2.0/tests/matrix_multiply/matrix_multiply
+phoenix-2.0/tests/matrix_multiply/matrix_multiply-seq
+phoenix-2.0/tests/matrix_multiply/matrix_multiply-pthread
+phoenix-2.0/tests/pca/pca
+phoenix-2.0/tests/pca/pca-seq
+phoenix-2.0/tests/pca/pca-pthread
+phoenix-2.0/tests/string_match/string_match
+phoenix-2.0/tests/string_match/string_match-seq
+phoenix-2.0/tests/string_match/string_match-pthread
+phoenix-2.0/tests/word_count/word_count
+phoenix-2.0/tests/word_count/word_count-seq
+phoenix-2.0/tests/word_count/word_count-pthread
