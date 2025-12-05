@@ -9,7 +9,6 @@ import os
 
 
 m5.util.addToPath("/gem5/configs")
-from common.FileSystemConfig import config_filesystem
 
 parser = argparse.ArgumentParser(description="Unified gem5 setup for C-3 Artifact")
 
@@ -27,11 +26,6 @@ args = parser.parse_args()
 
 remote_latency = 140
 
-print(f"PROTOCOL: {buildEnv['PROTOCOL']}")
-print(f"Cores: {args.cores}")
-print(f"Switched: {args.switched}")
-print(f"CPU Config: {args.cpu_config}")
-print(f"Remote Latency: {remote_latency}")
 
 
 
@@ -227,14 +221,30 @@ if args.cmd and args.cmd[0] == "--":
 if not args.cmd:
     fatal("No workload/binary specified. Expect: -- <binary> [args...]")
 
-# Set working directory to the binary's directory so relative paths work
+
 binary_path = args.cmd[0]
-binary_dir = os.path.dirname(os.path.abspath(binary_path))
+binary_abs = os.path.abspath(binary_path)
+
+
+def find_run_directory(binary_path):
+    """Find the 'run/' directory for PARSEC/Phoenix benchmarks."""
+    path_parts = binary_path.split(os.sep)
+    
+    if 'inst' in path_parts:
+        inst_idx = path_parts.index('inst')
+        run_path = os.sep.join(path_parts[:inst_idx] + ['run'])
+        if os.path.isdir(run_path):
+            return run_path
+    
+    return os.path.dirname(binary_path)
+
+run_dir = find_run_directory(binary_abs)
+print(f"Working directory set to: {run_dir}")
 
 system.workload = SEWorkload.init_compatible(args.cmd[0])
 
 process = Process()
-process.cwd = binary_dir  # Set working directory for the process
+process.cwd = run_dir  
 
 if args.redirect_output:
     process.output = "output.txt"
@@ -250,8 +260,6 @@ for cpu in system.cpu:
     cpu.createThreads()
 
 
-# Set up the pseudo file system for threads (required for ARM)
-config_filesystem(system)
 
 root = Root(full_system=False, system=system)
 m5.instantiate()
