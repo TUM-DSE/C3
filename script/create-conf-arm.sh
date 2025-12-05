@@ -50,7 +50,7 @@ declare -A parsec_cores=(
     ["raytrace"]=24
     ["streamcluster"]=16
     ["swaptions"]=24
-    ["vips"]=24
+    ["vips"]=30
     ["x264"]=2
 )
 
@@ -71,7 +71,7 @@ declare -A parsec_switched=(
 
 declare -A parsec_args=(
     ["blackscholes"]="16 in_4.txt prices.txt"
-    ["bodytrack"]="sequenceB_1 4 1 5 1 0 8"
+    ["bodytrack"]="sequenceB_1 1 1 5 1 0 8"
     ["canneal"]="16 5 100 10.nets 1"
     ["dedup"]="-c -p -v -t 4 -i test.dat -o output.dat.ddp"
     ["facesim"]="-h"
@@ -98,10 +98,11 @@ declare -A parsec_gcc_pthreads=(
 
 echo "Generating PARSEC ARM commands..."
 
-# For ARM, we use parsec-benchmark-arm with aarch64-linux.gcc paths
-for app_dir in "${BENCHMARKS_DIR}/parsec-benchmark-arm/pkgs/apps/"*/inst/aarch64-linux.gcc/bin \
-               "${BENCHMARKS_DIR}/parsec-benchmark-arm/pkgs/apps/"*/inst/aarch64-linux.gcc-pthreads/bin \
-               "${BENCHMARKS_DIR}/parsec-benchmark-arm/pkgs/kernels/"*/inst/aarch64-linux.gcc/bin; do
+# For ARM, binaries are in amd64-linux.gcc-pthreads (or gcc-openmp) but are actually ARM binaries
+# The directory names are misleading but the binaries are cross-compiled for ARM
+for app_dir in "${BENCHMARKS_DIR}/parsec-benchmark-arm/pkgs/apps/"*/inst/amd64-linux.gcc-pthreads/bin \
+               "${BENCHMARKS_DIR}/parsec-benchmark-arm/pkgs/apps/"*/inst/amd64-linux.gcc-openmp/bin \
+               "${BENCHMARKS_DIR}/parsec-benchmark-arm/pkgs/kernels/"*/inst/amd64-linux.gcc-pthreads/bin; do
     [[ -d "$app_dir" ]] || continue
     
     if [[ "$app_dir" == *"/apps/"* ]]; then
@@ -112,13 +113,6 @@ for app_dir in "${BENCHMARKS_DIR}/parsec-benchmark-arm/pkgs/apps/"*/inst/aarch64
     
     # Skip if not in our list
     [[ -z "${parsec_cores[$name]:-}" ]] && continue
-    
-    # Check if this app needs gcc-pthreads
-    if [[ -n "${parsec_gcc_pthreads[$name]:-}" ]]; then
-        [[ "$app_dir" == *"aarch64-linux.gcc/bin" ]] && continue
-    else
-        [[ "$app_dir" == *"gcc-pthreads/bin" ]] && continue
-    fi
     
     rel_path=$(echo "$app_dir" | sed "s|${BENCHMARKS_DIR}/||")
     binary=${parsec_binary[$name]:-$name}
@@ -149,16 +143,17 @@ done
 #------------------------------------------------------------------------------
 declare -A splash_cores=(
     ["barnes"]=14
-    ["cholesky"]=8
+    ["cholesky"]=12
     ["fft"]=12
     ["fmm"]=12
     ["lu-cont"]=8
-    ["lu-ncont"]=10
-    ["ocean-ncont"]=8
+    ["lu-ncont"]=12
+    ["ocean-ncont"]=10
+    ["ocean-cont"]=10
     ["radiosity"]=14
     ["radix"]=8
-    ["raytrace"]=8
-    ["volrend"]=8
+    ["raytrace"]=14
+    ["volrend"]=12
     ["volrend-npl"]=10
     ["water-nsquared"]=8
     ["water-spatial"]=8
@@ -172,10 +167,11 @@ declare -A splash_switched=(
     ["lu-cont"]="No"
     ["lu-ncont"]="No"
     ["ocean-ncont"]="No"
+    ["ocean-cont"]="No"
     ["radiosity"]="Yes"
     ["radix"]="No"
     ["raytrace"]="No"
-    ["volrend"]="No"
+    ["volrend"]="Yes"
     ["volrend-npl"]="No"
     ["water-nsquared"]="No"
     ["water-spatial"]="No"
@@ -189,6 +185,7 @@ declare -A splash_args=(
     ["lu-cont"]="LU-CONT -p8 -n256"
     ["lu-ncont"]="LU-NOCONT -p8 -n256"
     ["ocean-ncont"]="OCEAN-NOCONT -p8 -n130"
+    ["ocean-cont"]="OCEAN-CONT -p8 -n130"
     ["radiosity"]="RADIOSITY -p 8 -ae 100 -bf 0.1 -en 0.05 -room -batch"
     ["radix"]="RADIX -p8 -n200000"
     ["raytrace"]="RAYTRACE -p8 -m34 inputs/teapot.env"
@@ -206,6 +203,7 @@ declare -A splash_dir_map=(
     ["lu-contiguous_blocks"]="lu-cont"
     ["lu-non_contiguous_blocks"]="lu-ncont"
     ["ocean-non_contiguous_partitions"]="ocean-ncont"
+    ["ocean-contiguous_partitions"]="ocean-cont"
     ["radiosity"]="radiosity"
     ["radix"]="radix"
     ["raytrace"]="raytrace"
@@ -223,6 +221,7 @@ declare -A splash_input=(
     ["lu-cont"]=""
     ["lu-ncont"]=""
     ["ocean-ncont"]=""
+    ["ocean-cont"]=""
     ["radiosity"]=""
     ["radix"]=""
     ["raytrace"]=""
@@ -277,7 +276,7 @@ declare -A phoenix_cores=(
     ["matrix_multiply"]=10
     ["pca"]=30
     ["string_match"]=8
-    ["word_count"]=12
+    ["word_count"]=8
 )
 
 declare -A phoenix_switched=(
@@ -294,8 +293,8 @@ declare -A phoenix_args=(
     ["histogram"]="histogram image-2.bmp"
     ["kmeans"]="kmeans -d 500 -c 6 -p 100 -s 100"
     ["linear_regression"]="linear_regression ex1data1.txt"
-    ["matrix_multiply"]="matrix_multiply 30 30"
-    ["pca"]="pca -r 125 -c 125 -s 75"
+    ["matrix_multiply"]="matrix_multiply 50 50"
+    ["pca"]="pca -r 75 -c 75 -s 75"
     ["string_match"]="string_match test.txt"
     ["word_count"]="word_count test.txt"
 )

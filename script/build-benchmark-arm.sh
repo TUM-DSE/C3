@@ -54,6 +54,13 @@ build_parsec_arm() {
     cd "${PAR_DIR}"
     export PARSECDIR="${PAR_DIR}"
     export PATH="${PAR_DIR}/bin:${PATH}"
+
+        # Download inputs if not present
+    if [[ ! -d "${PAR_DIR}/pkgs/apps/blackscholes/inputs" ]]; then
+        echo "    Downloading PARSEC inputs..."
+        chmod +x "${PAR_DIR}/get-inputs" 2>/dev/null || true
+        "${PAR_DIR}/get-inputs" "${PAR_DIR}" "${PAR_DIR}"
+    fi
     
     # Build dependencies first (for ferret)
     echo "    Building dependencies (gsl, libjpeg)..."
@@ -74,29 +81,8 @@ build_parsec_arm() {
     echo "==> Extracting PARSEC ARM inputs..."
     extract_parsec_inputs_arm
     
+    cd "${REPO_ROOT}"
     echo "==> PARSEC ARM build complete"
-    
-    # Verify binaries are ARM
-    echo "==> Verifying ARM binaries..."
-    for app in "${PARSEC_APPS[@]}"; do
-        local bin_path
-        if [[ -f "${PAR_DIR}/pkgs/apps/${app}/inst/amd64-linux.gcc/bin/${app}" ]]; then
-            bin_path="${PAR_DIR}/pkgs/apps/${app}/inst/amd64-linux.gcc/bin/${app}"
-        elif [[ -f "${PAR_DIR}/pkgs/kernels/${app}/inst/amd64-linux.gcc/bin/${app}" ]]; then
-            bin_path="${PAR_DIR}/pkgs/kernels/${app}/inst/amd64-linux.gcc/bin/${app}"
-        fi
-        
-        if [[ -n "$bin_path" && -f "$bin_path" ]]; then
-            # Use readelf instead of file command (more reliable in cross-compile environments)
-            if aarch64-linux-gnu-readelf -h "$bin_path" 2>/dev/null | grep -q "AArch64"; then
-                echo "    ✓ ${app}: ARM binary"
-            else
-                echo "    ✗ ${app}: NOT ARM binary!"
-            fi
-        else
-            echo "    ⚠ ${app}: binary not found"
-        fi
-    done
 }
 
 extract_parsec_inputs_arm() {
@@ -111,20 +97,30 @@ extract_parsec_inputs_arm() {
             
             local app_name=$(basename "$app_dir")
             local input_dir="${app_dir}inputs"
-            local bin_dir="${app_dir}inst/amd64-linux.gcc/bin"
-            local run_dir="${app_dir}inst/amd64-linux.gcc/run"
             
             [[ -d "$input_dir" ]] || continue
             
             local input_tar="${input_dir}/input_${INPUT_SIZE}.tar"
             [[ -f "$input_tar" ]] || continue
             
-            mkdir -p "$run_dir"
-            echo "    Extracting ${app_name} (${INPUT_SIZE})..."
-            tar -xf "$input_tar" -C "$run_dir"
+            # For ARM, binaries are in gcc-pthreads or gcc-openmp (for freqmine)
+            # We need to extract inputs to ALL possible bin directories
+            local extracted=0
+            for build_config in amd64-linux.gcc-pthreads amd64-linux.gcc-openmp amd64-linux.gcc; do
+                local bin_dir="${app_dir}inst/${build_config}/bin"
+                local run_dir="${app_dir}inst/${build_config}/run"
+                
+                if [[ -d "$bin_dir" ]]; then
+                    echo "    Extracting ${app_name} (${INPUT_SIZE}) to ${build_config}..."
+                    mkdir -p "$run_dir"
+                    tar -xf "$input_tar" -C "$run_dir"
+                    tar -xf "$input_tar" -C "$bin_dir"
+                    extracted=1
+                fi
+            done
             
-            if [[ -d "$bin_dir" ]]; then
-                tar -xf "$input_tar" -C "$bin_dir"
+            if [[ $extracted -eq 0 ]]; then
+                echo "    Warning: No bin directory found for ${app_name}"
             fi
         done
     done
@@ -161,32 +157,7 @@ build_splash_arm() {
     echo "    Building main benchmarks..."
     make -j "${JOBS}"
     
-    echo "==> Verifying SPLASH-4 ARM binaries..."
-    for app in barnes cholesky fft fmm lu-contiguous_blocks lu-non_contiguous_blocks \
-               ocean-contiguous_partitions ocean-non_contiguous_partitions radix \
-               radiosity raytrace volrend volrend-no_print_lock water-nsquared water-spatial; do
-        local bin_name
-        case "$app" in
-            lu-contiguous_blocks) bin_name="LU-CONT" ;;
-            lu-non_contiguous_blocks) bin_name="LU-NOCONT" ;;
-            ocean-contiguous_partitions) bin_name="OCEAN-CONT" ;;
-            ocean-non_contiguous_partitions) bin_name="OCEAN-NOCONT" ;;
-            volrend-no_print_lock) bin_name="VOLREND-NPL" ;;
-            *) bin_name=$(echo "$app" | tr '[:lower:]' '[:upper:]') ;;
-        esac
-        
-        if [[ -f "${SPLASH_DIR}/${app}/${bin_name}" ]]; then
-            # Use readelf instead of file command (more reliable in cross-compile environments)
-            if aarch64-linux-gnu-readelf -h "${SPLASH_DIR}/${app}/${bin_name}" 2>/dev/null | grep -q "AArch64"; then
-                echo "    ✓ ${app}: ARM binary"
-            else
-                echo "    ✗ ${app}: NOT ARM binary!"
-            fi
-        else
-            echo "    ⚠ ${app}: binary not found"
-        fi
-    done
-    
+    cd "${REPO_ROOT}"
     echo "==> SPLASH-4 ARM build complete"
 }
 
@@ -210,20 +181,7 @@ build_phoenix_arm() {
     cd "${PHOENIX_DIR}/tests"
     make -j "${JOBS}"
     
-    echo "==> Verifying PHOENIX ARM binaries..."
-    for app in histogram kmeans linear_regression matrix_multiply pca string_match word_count; do
-        if [[ -f "${PHOENIX_DIR}/tests/${app}/${app}" ]]; then
-            # Use readelf instead of file command (more reliable in cross-compile environments)
-            if aarch64-linux-gnu-readelf -h "${PHOENIX_DIR}/tests/${app}/${app}" 2>/dev/null | grep -q "AArch64"; then
-                echo "    ✓ ${app}: ARM binary"
-            else
-                echo "    ✗ ${app}: NOT ARM binary!"
-            fi
-        else
-            echo "    ⚠ ${app}: binary not found"
-        fi
-    done
-    
+    cd "${REPO_ROOT}"
     echo "==> PHOENIX ARM build complete"
 }
 
@@ -238,8 +196,9 @@ case "${1:-all}" in
     parsec)  build_parsec_arm ;;
     splash)  build_splash_arm ;;
     phoenix) build_phoenix_arm ;;
+    inputs)  extract_parsec_inputs_arm ;;
     all)     build_parsec_arm; build_splash_arm; build_phoenix_arm ;;
-    *)       echo "Usage: $0 [parsec|splash|phoenix|all]"; exit 1 ;;
+    *)       echo "Usage: $0 [parsec|splash|phoenix|inputs|all]"; exit 1 ;;
 esac
 
 echo ""

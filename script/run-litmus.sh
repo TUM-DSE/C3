@@ -3,67 +3,71 @@
 # run-litmus.sh - Run ARM litmus tests for heterogeneous MCM validation
 #
 # Usage:
-#   ./script/run-litmus.sh                     # Run all litmus tests
-#   ./script/run-litmus.sh IRIW_atomic         # Run specific test
-#   ./script/run-litmus.sh --list              # List available tests
+#   ./script/run-litmus.sh                                    # Run all litmus tests
+#   ./script/run-litmus.sh IRIW_atomic                        # Run specific test
+#   ./script/run-litmus.sh IRIW_atomic MESI_unord_CXL         # Run specific test + protocol
+#   ./script/run-litmus.sh IRIW_atomic MESI_unord_CXL arm_arm # Run specific test + protocol + mcm
 #
 # Output:
-#   Results: {REPO_ROOT}/data/litmus/gem5.output/{test_name}/
-#   Logs:    {REPO_ROOT}/data/litmus/logs/{test_name}.log
+#   Results: {REPO_ROOT}/data/litmus/gem5.output/{test_name}/{protocol}/{mcm}/
+#   Logs:    {REPO_ROOT}/data/litmus/logs/{test_name}_{protocol}_{mcm}.log
+#   Report:  {REPO_ROOT}/data/litmus/litmus_results.txt
 #
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CONFIG_FILE="${REPO_ROOT}/setup/litmus-test-mcm-ARM.conf"
+CONFIG_FILE="${REPO_ROOT}/benchmarks/configuration/commands-litmus.conf"
 DATA_DIR="${REPO_ROOT}/data/litmus"
 LOG_DIR="${DATA_DIR}/logs"
-OUTPUT_DIR="${DATA_DIR}/gem5.output"
+REPORT_FILE="${DATA_DIR}/litmus_results.txt"
 
-# gem5 binary and setup script
-GEM5_BINARY="${REPO_ROOT}/gem5/build/ARM/gem5.opt"
-SETUP_SCRIPT="${REPO_ROOT}/setup/setup-litmus.py"
-
-# Default parameters
-CORES="${CORES:-4}"
-REMOTE_LATENCY="${REMOTE_LATENCY:-10}"
-MAX_PARALLEL="${MAX_PARALLEL:-4}"
-
-# Filter (optional)
+# Filters (optional)
 FILTER_TEST="${1:-}"
+FILTER_PROTOCOL="${2:-}"
+FILTER_MCM="${3:-}"
 
 #------------------------------------------------------------------------------
 # Show help
 #------------------------------------------------------------------------------
 show_help() {
-    echo "Usage: $0 [options] [test_name]"
+    echo "Usage: $0 [test_name] [protocol] [mcm]"
     echo ""
     echo "Options:"
     echo "  --list          List all available litmus tests"
     echo "  --help          Show this help message"
+    echo "  --generate      Generate configuration file only"
     echo ""
-    echo "Environment variables:"
-    echo "  CORES           Number of cores (default: 4)"
-    echo "  REMOTE_LATENCY  Remote memory latency (default: 10)"
-    echo "  MAX_PARALLEL    Max parallel experiments (default: 4)"
+    echo "Filters:"
+    echo "  test_name       Run only this specific test"
+    echo "  protocol        Run only this protocol (MESI_unord_CXL or MESI_CXL_MOESI)"
+    echo "  mcm             Run only this MCM config (arm_arm, arm_tso, tso_tso)"
     echo ""
     echo "Examples:"
-    echo "  $0                      # Run all litmus tests"
-    echo "  $0 IRIW_atomic          # Run specific test"
-    echo "  $0 MP_dmb.sys           # Run MP with dmb.sy fences"
+    echo "  $0                                        # Run all litmus tests"
+    echo "  $0 IRIW_atomic                            # Run specific test"
+    echo "  $0 IRIW_atomic MESI_unord_CXL             # Run test with specific protocol"
+    echo "  $0 IRIW_atomic MESI_unord_CXL arm_arm     # Run test with specific protocol and MCM"
     exit 0
 }
 
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # List available tests
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 list_tests() {
+    if [[ ! -f "${CONFIG_FILE}" ]]; then
+        echo "Configuration file not found. Generating..."
+        "${SCRIPT_DIR}/create-conf-litmus.sh"
+    fi
+    
     echo "Available litmus tests:"
     echo "========================"
-    while IFS='=' read -r name cmd; do
-        [[ -z "$name" || "$name" =~ ^# ]] && continue
-        echo "  - ${name}"
-    done < "${CONFIG_FILE}"
+    grep -v '^#' "${CONFIG_FILE}" | grep -v '^$' | cut -d'|' -f1 | sort -u | while read -r name; do
+        echo "  - $(echo "$name" | xargs)"
+    done
+    echo ""
+    echo "Protocols: MESI_unord_CXL, MESI_CXL_MOESI"
+    echo "MCM configs: arm_arm, arm_tso, tso_tso"
     exit 0
 }
 
@@ -71,163 +75,211 @@ list_tests() {
 # Check prerequisites
 #------------------------------------------------------------------------------
 check_prerequisites() {
-    if [[ ! -f "${GEM5_BINARY}" ]]; then
-        echo "ERROR: gem5 ARM binary not found: ${GEM5_BINARY}"
-        echo "Build gem5 for ARM first with: ./script/build-gem5.sh ARM"
+    local found=0
+    for protocol in MESI_unord_CXL MESI_CXL_MOESI; do
+        if [[ -f "${REPO_ROOT}/gem5/build/ARM_${protocol}/gem5.opt" ]]; then
+            found=1
+        else
+            echo "WARNING: gem5 ARM build not found: gem5/build/ARM_${protocol}/gem5.opt"
+        fi
+    done
+    
+    if [[ $found -eq 0 ]]; then
+        echo "ERROR: No ARM gem5 builds found."
+        echo "Build gem5 for ARM first with: ./script/build-gem5-arm.sh"
         exit 1
     fi
     
+    # Generate config if missing
     if [[ ! -f "${CONFIG_FILE}" ]]; then
-        echo "ERROR: Litmus test config not found: ${CONFIG_FILE}"
-        exit 1
-    fi
-    
-    if [[ ! -f "${SETUP_SCRIPT}" ]]; then
-        echo "ERROR: Setup script not found: ${SETUP_SCRIPT}"
-        exit 1
+        echo "Configuration file not found. Generating..."
+        "${SCRIPT_DIR}/create-conf-litmus.sh"
     fi
 }
 
 #------------------------------------------------------------------------------
-# Run a single litmus test
+# Run a single experiment in background
 #------------------------------------------------------------------------------
-run_litmus_test() {
+run_experiment() {
     local test_name="$1"
-    local test_cmd="$2"
-    local output_dir="${OUTPUT_DIR}/${test_name}"
-    local log_file="${LOG_DIR}/${test_name}.log"
+    local protocol="$2"
+    local mcm="$3"
+    local cmd_line="$4"
+    local log_file="${LOG_DIR}/${test_name}_${protocol}_${mcm}.log"
     
-    mkdir -p "${output_dir}"
+    # Backup existing log if present
+    if [[ -f "$log_file" ]]; then
+        local timestamp=$(date +"%Y%m%d_%H%M%S")
+        cp "$log_file" "${LOG_DIR}/backup/${test_name}_${protocol}_${mcm}_${timestamp}.log"
+    fi
     
-    # Parse command: binary and optional core count
-    local binary=$(echo "$test_cmd" | awk '{print $1}')
-    local test_cores=$(echo "$test_cmd" | awk '{print $2}')
-    [[ -z "$test_cores" ]] && test_cores="${CORES}"
-    
-    echo "[$(date +%H:%M:%S)] Running: ${test_name} (${test_cores} cores)"
-    
+    # Run in background with output to log file
     {
-        echo "========================================"
-        echo "Litmus Test: ${test_name}"
-        echo "Binary: ${binary}"
-        echo "Cores: ${test_cores}"
-        echo "Start: $(date)"
-        echo "========================================"
-        
+        echo "[$(date)] STARTING: ${test_name}/${protocol}/${mcm}"
         local start_time=$(date +%s)
         
-        cd "${output_dir}"
-        
-        "${GEM5_BINARY}" \
-            --outdir="${output_dir}" \
-            "${SETUP_SCRIPT}" \
-            --cores "${test_cores}" \
-            --remote-latency "${REMOTE_LATENCY}" \
-            "${binary}"
-        
-        local exit_code=$?
-        local end_time=$(date +%s)
-        local duration=$((end_time - start_time))
-        
-        echo ""
-        echo "========================================"
-        echo "Completed: ${test_name}"
-        echo "Exit code: ${exit_code}"
-        echo "Duration: ${duration}s"
-        echo "End: $(date)"
-        echo "========================================"
-        
-    } > "${log_file}" 2>&1
+        cd "${REPO_ROOT}"
+        if eval "${cmd_line}"; then
+            local end_time=$(date +%s)
+            local duration=$((end_time - start_time))
+            echo "[$(date)] COMPLETED: ${test_name}/${protocol}/${mcm} in ${duration}s"
+        else
+            local exit_code=$?
+            local end_time=$(date +%s)
+            local duration=$((end_time - start_time))
+            echo "[$(date)] FAILED: ${test_name}/${protocol}/${mcm} after ${duration}s (exit code: ${exit_code})"
+        fi
+    } > "${log_file}" 2>&1 &
     
-    return $?
+    LAST_PID=$!
+}
+
+# ------------------------------------------------------------------------------
+# Check if litmus test passed
+# Three possible output formats:
+#   1. herd7 style: "Positive: 0, Negative: N" → PASS if Positive=0
+#   2. Failure Test style: "Failure Test: 0" → PASS if Failure Test=0
+#   3. IRIW style with Success!: "Success!" and "Count (r0:2 and r1:2): 0"
+# ------------------------------------------------------------------------------
+check_test_result() {
+    local output_file="$1"
+    
+    [[ ! -f "$output_file" ]] && echo "NO_OUTPUT" && return
+    
+    # Format 1: herd7 style - "Positive: N, Negative: M"
+    # Example: "Positive: 0, Negative: 1000000"
+    # PASS if Positive is 0 (no forbidden states observed)
+    if grep -q "Positive:" "$output_file"; then
+        # Extract the number after "Positive:" (handles "Positive: 0," format)
+        local positive=$(grep "Positive:" "$output_file" | sed -n 's/.*Positive:[[:space:]]*\([0-9]*\).*/\1/p' | head -1)
+        if [[ "$positive" == "0" ]]; then
+            echo "PASS"
+        else
+            echo "FAIL:${positive}"
+        fi
+        return
+    fi
+    
+    # Format 2: Failure Test style - "Failure Test: N"
+    # Example: "Pass Test: 100000" and "Failure Test: 0"
+    # PASS if Failure Test is 0
+    if grep -q "Failure Test:" "$output_file"; then
+        # Extract the number after "Failure Test:"
+        local failures=$(grep "Failure Test:" "$output_file" | sed -n 's/.*Failure Test:[[:space:]]*\([0-9]*\).*/\1/p' | head -1)
+        if [[ "$failures" == "0" ]]; then
+            echo "PASS"
+        else
+            echo "FAIL:${failures}"
+        fi
+        return
+    fi
+    
+    # Format 3: IRIW style with "Count (r0:2 and r1:2): N"
+    # This checks for forbidden state count in IRIW tests
+    # May have multiple occurrences, sum them all
+    if grep -q "Count (r0:2 and r1:2):" "$output_file"; then
+        local total_forbidden=0
+        while IFS= read -r line; do
+            local count=$(echo "$line" | sed -n 's/.*Count (r0:2 and r1:2):[[:space:]]*\([0-9]*\).*/\1/p')
+            if [[ -n "$count" ]]; then
+                total_forbidden=$((total_forbidden + count))
+            fi
+        done < <(grep "Count (r0:2 and r1:2):" "$output_file")
+        
+        if [[ "$total_forbidden" == "0" ]]; then
+            echo "PASS"
+        else
+            echo "FAIL:${total_forbidden}"
+        fi
+        return
+    fi
+    
+    # Fallback: Check for "Observation ... Never 0" pattern (herd7 summary)
+    if grep -q "Observation.*Never 0" "$output_file"; then
+        echo "PASS"
+        return
+    fi
+    
+    # Fallback: Check for explicit "Success!" pattern
+    if grep -q "Success!" "$output_file"; then
+        echo "PASS"
+        return
+    fi
+    
+    echo "UNKNOWN"
 }
 
 #------------------------------------------------------------------------------
-# Run tests in parallel
+# Generate report
 #------------------------------------------------------------------------------
-run_all_tests() {
-    local pids=()
-    local test_names=()
-    local count=0
+generate_report() {
+    echo ""
+    echo "Generating litmus test report..."
     
-    while IFS='=' read -r name cmd; do
-        # Skip empty lines and comments
-        [[ -z "$name" || "$name" =~ ^# ]] && continue
+    {
+        echo "=============================================================================="
+        echo "                    LITMUS TEST RESULTS REPORT"
+        echo "=============================================================================="
+        echo ""
+        echo "Date: $(date)"
+        echo "Protocols tested: MESI_unord_CXL MESI_CXL_MOESI"
+        echo "MCM configurations: arm_arm arm_tso tso_tso"
+        echo ""
+        echo "Legend:"
+        echo "  PASS     - Forbidden state count = 0 (memory model correctly enforced)"
+        echo "  FAIL:N   - Forbidden state observed N times (memory model violation)"
+        echo "  UNKNOWN  - Could not parse output"
+        echo "  NO_OUTPUT- Test did not produce output"
+        echo ""
+        echo "=============================================================================="
         
-        # Apply filter if specified
-        if [[ -n "${FILTER_TEST}" && "${name}" != "${FILTER_TEST}" ]]; then
-            continue
-        fi
+        local total_pass=0
+        local total_fail=0
+        local total_unknown=0
         
-        # Wait if we've reached max parallel jobs
-        while [[ ${#pids[@]} -ge ${MAX_PARALLEL} ]]; do
-            for i in "${!pids[@]}"; do
-                if ! kill -0 "${pids[$i]}" 2>/dev/null; then
-                    wait "${pids[$i]}" || true
-                    echo "[$(date +%H:%M:%S)] Completed: ${test_names[$i]}"
-                    unset 'pids[i]'
-                    unset 'test_names[i]'
-                fi
+        for protocol in MESI_unord_CXL MESI_CXL_MOESI; do
+            echo ""
+            echo "=============================================================================="
+            echo " Protocol: ${protocol}"
+            echo "=============================================================================="
+            
+            for mcm in arm_arm arm_tso tso_tso; do
+                echo ""
+                echo "  MCM: ${mcm}"
+                echo "  ----------------------------------------"
+                
+                local mcm_pass=0
+                local mcm_fail=0
+                
+                # Get unique test names from config
+                grep -v '^#' "${CONFIG_FILE}" | grep -v '^$' | cut -d'|' -f1 | sort -u | while read -r name; do
+                    name=$(echo "$name" | xargs)
+                    # Litmus test results are in output.txt, not simout.txt
+                    local output_file="${DATA_DIR}/gem5.output/${name}/${protocol}/${mcm}/output.txt"
+                    local result=$(check_test_result "$output_file")
+                    
+                    if [[ "$result" == "PASS" ]]; then
+                        echo "    ✓ ${name}: PASS"
+                    elif [[ "$result" == "NO_OUTPUT" ]]; then
+                        echo "    ? ${name}: NO OUTPUT"
+                    elif [[ "$result" == "UNKNOWN" ]]; then
+                        echo "    ? ${name}: UNKNOWN"
+                    else
+                        local fail_count="${result#FAIL:}"
+                        echo "    ✗ ${name}: FAIL (forbidden state observed ${fail_count} times)"
+                    fi
+                done
+                
+                echo "  ----------------------------------------"
             done
-            # Reindex arrays
-            pids=("${pids[@]}")
-            test_names=("${test_names[@]}")
-            sleep 1
         done
         
-        # Start test in background
-        run_litmus_test "${name}" "${cmd}" &
-        pids+=($!)
-        test_names+=("${name}")
-        ((count++))
+        echo ""
+        echo "=============================================================================="
         
-    done < "${CONFIG_FILE}"
+    } > "${REPORT_FILE}"
     
-    # Wait for remaining tests
-    echo ""
-    echo "Waiting for ${#pids[@]} remaining tests..."
-    for i in "${!pids[@]}"; do
-        wait "${pids[$i]}" || true
-        echo "[$(date +%H:%M:%S)] Completed: ${test_names[$i]}"
-    done
-    
-    echo ""
-    echo "=============================================="
-    echo "All ${count} litmus tests completed!"
-    echo "=============================================="
-}
-
-#------------------------------------------------------------------------------
-# Extract and summarize results
-#------------------------------------------------------------------------------
-summarize_results() {
-    echo ""
-    echo "=============================================="
-    echo "Litmus Test Results Summary"
-    echo "=============================================="
-    
-    local passed=0
-    local failed=0
-    local total=0
-    
-    for log_file in "${LOG_DIR}"/*.log; do
-        [[ -f "$log_file" ]] || continue
-        local test_name=$(basename "$log_file" .log)
-        
-        # Check if test completed successfully
-        if grep -q "Exiting @ tick" "$log_file"; then
-            local ticks=$(grep "Exiting @ tick" "$log_file" | awk '{print $4}')
-            echo "  ✓ ${test_name}: completed (${ticks} ticks)"
-            ((passed++))
-        else
-            echo "  ✗ ${test_name}: FAILED"
-            ((failed++))
-        fi
-        ((total++))
-    done
-    
-    echo ""
-    echo "Summary: ${passed}/${total} passed, ${failed} failed"
+    cat "${REPORT_FILE}"
 }
 
 #------------------------------------------------------------------------------
@@ -242,29 +294,159 @@ case "${FILTER_TEST}" in
     --list|-l)
         list_tests
         ;;
+    --generate|-g)
+        "${SCRIPT_DIR}/create-conf-litmus.sh"
+        exit 0
+        ;;
 esac
 
+# Create directories first
+mkdir -p "${LOG_DIR}"
+mkdir -p "${LOG_DIR}/backup"
+mkdir -p "${DATA_DIR}/gem5.output"
+
+# Check prerequisites
 check_prerequisites
 
-# Create directories
-mkdir -p "${LOG_DIR}"
-mkdir -p "${OUTPUT_DIR}"
+# PID file for tracking running processes
+PID_FILE="${DATA_DIR}/running_pids.txt"
+> "${PID_FILE}"
+
+cd "${REPO_ROOT}"
 
 echo "=============================================="
 echo "Running ARM Litmus Tests"
 echo "=============================================="
-echo "Config: ${CONFIG_FILE}"
-echo "Output: ${OUTPUT_DIR}"
-echo "Cores: ${CORES}"
-echo "Remote latency: ${REMOTE_LATENCY}"
-echo "Max parallel: ${MAX_PARALLEL}"
-[[ -n "${FILTER_TEST}" ]] && echo "Filter: ${FILTER_TEST}"
+echo "Config file: ${CONFIG_FILE}"
+echo "Data directory: ${DATA_DIR}"
+echo "Log directory: ${LOG_DIR}"
+[[ -n "${FILTER_TEST}" ]] && echo "Filter test: ${FILTER_TEST}"
+[[ -n "${FILTER_PROTOCOL}" ]] && echo "Filter protocol: ${FILTER_PROTOCOL}"
+[[ -n "${FILTER_MCM}" ]] && echo "Filter MCM: ${FILTER_MCM}"
 echo "=============================================="
 echo ""
 
-run_all_tests
-summarize_results
+#------------------------------------------------------------------------------
+# Main execution
+#------------------------------------------------------------------------------
+declare -a running_pids=()
+declare -A pid_info=()
+total=0
+
+# Read commands-litmus.conf and start experiments
+# Format: test_name | protocol | mcm | command_line
+while IFS='|' read -r test_name protocol mcm cmd_line || [[ -n "$test_name" ]]; do
+    # Skip comments and empty lines
+    [[ "$test_name" =~ ^[[:space:]]*#.*$ || -z "$test_name" ]] && continue
+    
+    # Trim whitespace
+    test_name=$(echo "$test_name" | xargs)
+    protocol=$(echo "$protocol" | xargs)
+    mcm=$(echo "$mcm" | xargs)
+    cmd_line=$(echo "$cmd_line" | xargs)
+    
+    # Apply filters
+    if [[ -n "${FILTER_TEST}" && "${test_name}" != "${FILTER_TEST}" ]]; then
+        continue
+    fi
+    if [[ -n "${FILTER_PROTOCOL}" && "${protocol}" != "${FILTER_PROTOCOL}" ]]; then
+        continue
+    fi
+    if [[ -n "${FILTER_MCM}" && "${mcm}" != "${FILTER_MCM}" ]]; then
+        continue
+    fi
+    
+    # Extract output directory from command line and make it absolute
+    out_dir=$(echo "$cmd_line" | grep -oP '(?<=--outdir=)[^ ]+')
+    out_dir="${REPO_ROOT}/${out_dir}"
+    
+    # Update cmd_line with absolute path
+    cmd_line=$(echo "$cmd_line" | sed "s|--outdir=[^ ]*|--outdir=${out_dir}|")
+    
+    # Create output directory
+    mkdir -p "${out_dir}"
+    
+    # Start experiment in background
+    run_experiment "$test_name" "$protocol" "$mcm" "$cmd_line"
+    pid=$LAST_PID
+    running_pids+=("$pid")
+    pid_info["$pid"]="${test_name}/${protocol}/${mcm}"
+    ((total++)) || true
+    
+    # Save PID to file
+    echo "${pid} ${test_name}/${protocol}/${mcm}" >> "${PID_FILE}"
+    
+    echo "[STARTED] ${test_name}/${protocol}/${mcm} (PID: $pid)"
+    
+done < "${CONFIG_FILE}"
 
 echo ""
-echo "Logs: ${LOG_DIR}/"
-echo "Results: ${OUTPUT_DIR}/"
+echo "=============================================="
+echo "Started ${total} experiments in parallel"
+echo "=============================================="
+echo ""
+
+# Wait for all experiments to complete with progress monitoring
+completed=0
+failed=0
+declare -A pid_done=()
+
+echo "Waiting for experiments to complete (progress every 30s)..."
+echo ""
+
+while true; do
+    still_running=0
+    
+    for pid in "${running_pids[@]}"; do
+        if [[ "$pid" =~ ^[0-9]+$ && -z "${pid_done[$pid]:-}" ]]; then
+            exp_name="${pid_info[$pid]}"
+            
+            # Check if process is still running
+            if kill -0 "$pid" 2>/dev/null; then
+                ((still_running++)) || true
+            else
+                # Process finished
+                pid_done[$pid]=1
+                if wait "$pid" 2>/dev/null; then
+                    echo "[OK] ${exp_name}"
+                    ((completed++)) || true
+                else
+                    echo "[FAILED] ${exp_name}"
+                    ((failed++)) || true
+                fi
+            fi
+        fi
+    done
+    
+    # Exit loop when all done
+    if [[ $still_running -eq 0 ]]; then
+        break
+    fi
+    
+    # Show progress
+    echo ""
+    echo "--- [$(date +%H:%M:%S)] Progress: ${completed} completed, ${failed} failed, ${still_running} running (of ${total}) ---"
+    
+    sleep 30
+done
+
+echo ""
+echo "=============================================="
+echo "Summary:"
+echo "  Total started: ${total}"
+echo "  Completed:     ${completed}"
+echo "  Failed:        ${failed}"
+echo "=============================================="
+
+# Generate report
+generate_report
+
+echo ""
+echo "To monitor progress:"
+echo "  1. View logs: tail -f ${LOG_DIR}/*.log"
+echo "  2. Check process status: ps aux | grep gem5"
+echo "  3. View log backups: ls -la ${LOG_DIR}/backup/"
+echo ""
+echo "Results: ${DATA_DIR}/gem5.output/"
+echo "Report: ${REPORT_FILE}"
+echo "=============================================="

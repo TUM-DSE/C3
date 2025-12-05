@@ -52,7 +52,7 @@ declare -A parsec_cores=(
     ["raytrace"]=24
     ["streamcluster"]=16
     ["swaptions"]=24
-    ["vips"]=24
+    ["vips"]=30
     ["x264"]=2
 )
 
@@ -73,7 +73,7 @@ declare -A parsec_switched=(
 
 declare -A parsec_args=(
     ["blackscholes"]="16 in_4.txt prices.txt"
-    ["bodytrack"]="sequenceB_1 4 1 5 1 0 8"
+    ["bodytrack"]="sequenceB_1 1 1 5 1 0 8"
     ["canneal"]="16 5 100 10.nets 1"
     ["dedup"]="-c -p -v -t 4 -i test.dat -o output.dat.ddp"
     ["facesim"]="-h"
@@ -160,17 +160,17 @@ echo "[splash]" >> "${CONFIG_FILE}"
 
 declare -A splash_cores=(
     ["barnes"]=14
-    ["cholesky"]=8
+    ["cholesky"]=12
     ["fft"]=12
     ["fmm"]=12
     ["lu-cont"]=8
     ["lu-ncont"]=10
-    ["ocean-ncont"]=8
+    ["ocean-ncont"]=10
     ["radiosity"]=14
     ["radix"]=8
-    ["raytrace"]=8
-    ["volrend"]=8
-    ["volrend-npl"]=10
+    ["raytrace"]=14
+    ["volrend"]=12
+    ["volrend-npl"]=8
     ["water-nsquared"]=8
     ["water-spatial"]=8
 )
@@ -186,7 +186,7 @@ declare -A splash_switched=(
     ["radiosity"]="Yes"
     ["radix"]="No"
     ["raytrace"]="No"
-    ["volrend"]="No"
+    ["volrend"]="Yes"
     ["volrend-npl"]="No"
     ["water-nsquared"]="No"
     ["water-spatial"]="No"
@@ -198,7 +198,7 @@ declare -A splash_args=(
     ["fft"]="FFT -p8 -m16"
     ["fmm"]="FMM"
     ["lu-cont"]="LU-CONT -p8 -n256"
-    ["lu-ncont"]="LU-NOCONT -p8 -n256"
+    ["lu-ncont"]="LU-NOCONT -p9 -n256"
     ["ocean-ncont"]="OCEAN-NOCONT -p8 -n130"
     ["radiosity"]="RADIOSITY -p 8 -ae 100 -bf 0.1 -en 0.05 -room -batch"
     ["radix"]="RADIX -p8 -n200000"
@@ -297,7 +297,7 @@ declare -A phoenix_cores=(
     ["matrix_multiply"]=10
     ["pca"]=30
     ["string_match"]=8
-    ["word_count"]=12
+    ["word_count"]=8
 )
 
 declare -A phoenix_switched=(
@@ -314,7 +314,7 @@ declare -A phoenix_args=(
     ["histogram"]="histogram image-2.bmp"
     ["kmeans"]="kmeans -d 500 -c 6 -p 100 -s 100"
     ["linear_regression"]="linear_regression ex1data1.txt"
-    ["matrix_multiply"]="matrix_multiply 30 30"
+    ["matrix_multiply"]="matrix_multiply 50 50"
     ["pca"]="pca -r 125 -c 125 -s 75"
     ["string_match"]="string_match test.txt"
     ["word_count"]="word_count test.txt"

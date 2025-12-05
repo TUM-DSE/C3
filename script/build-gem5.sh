@@ -37,3 +37,27 @@ for PROTOCOL in "${PROTOCOLS[@]}"; do
     scons "${BUILD_DIR}/gem5.opt" -j "${JOBS}"
     echo "Done: ${BUILD_DIR}/gem5.opt"
 done
+
+for PROTOCOL in "${PROTOCOLS[@]}"; do
+    BUILD_DIR="build/ARM_${PROTOCOL}"
+
+    echo "=========================================="
+    echo "Building ARM ${PROTOCOL}"
+    echo "=========================================="
+    
+    scons defconfig "${BUILD_DIR}" build_opts/ARM
+    scons setconfig "${BUILD_DIR}" \
+        RUBY=y \
+        RUBY_${PROTOCOL}=y
+    scons "${BUILD_DIR}/gem5.opt" -j "${JOBS}"
+    
+    echo "Done: ${BUILD_DIR}/gem5.opt"
+done
+
+echo ""
+echo "=========================================="
+echo "ARM gem5 build complete!"
+echo "Built binaries:"
+for PROTOCOL in "${PROTOCOLS[@]}"; do
+    echo "  - gem5/build/ARM_${PROTOCOL}/gem5.opt"
+done
