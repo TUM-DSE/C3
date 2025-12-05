@@ -1,0 +1,6 @@
+ImportError: No module named --outdir=/setup/generated/benchmark-out/raytrace/MOESI_CMP_directory_edit
+
+At:
+  /usr/lib/python3.10/runpy.py(140): _get_module_details
+  /usr/lib/python3.10/runpy.py(220): run_module
+  src/python/m5/main.py(627): main
