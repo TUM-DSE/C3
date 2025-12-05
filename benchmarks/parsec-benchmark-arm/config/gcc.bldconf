@@ -47,7 +47,8 @@ export CXXCPPFLAGS=""
 export LIBS=""
 export EXTRA_LIBS=""
 export PARMACS_MACRO_FILE="pthreads"
-export LDFLAGS="-static"
+# Updated library paths for aarch64
+export LDFLAGS="-L${CC_HOME}/lib/aarch64-linux-gnu -L${CC_HOME}/aarch64-linux-gnu/lib -static"
 # Add PARSEC version to compiler flags
 if [ -f "${PARSECDIR}/version" ]; then
   CFLAGS="${CFLAGS} -DPARSEC_VERSION=$(${CAT} ${PARSECDIR}/version)"
