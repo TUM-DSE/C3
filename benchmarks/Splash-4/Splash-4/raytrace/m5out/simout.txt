@@ -1,9 +1,0 @@
-gem5 Simulator System.  https://www.gem5.org
-gem5 is copyrighted software; use the --copyright option for details.
-
-gem5 version 23.1.0.0
-gem5 compiled Nov  5 2024 16:03:12
-gem5 started Nov  6 2024 10:02:24
-gem5 executing on 248ff5a6f426, pid 1289
-command line: /gem5/build/X86_MOESI_CMP_directory_edit/gem5.opt -r -e -rm --outdir=/setup/generated/benchmark-out/raytrace/MOESI_CMP_directory_edit /setup/generated/setup-real.py -c 16 -ro RAYTRACE -p16 -m64 inputs/teapot.env
-
