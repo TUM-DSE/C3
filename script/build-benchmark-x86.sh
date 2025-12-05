@@ -39,6 +39,21 @@ build_parsec() {
     export PARSECDIR="${PAR_DIR}"
     export PATH="${PAR_DIR}/bin:${PATH}"
     
+    # Apps that require external input files (some apps generate inputs at runtime)
+    # facesim has input_simdev.tar instead of input_test.tar
+    # streamcluster, swaptions generate inputs at runtime (no inputs/ directory)
+    local APPS_WITH_INPUTS=(
+        "blackscholes"
+        "bodytrack"
+        "canneal"
+        "dedup"
+        "ferret"
+        "freqmine"
+        "raytrace"
+        "vips"
+        "x264"
+    )
+    
     # Check if inputs need to be downloaded
     # We check for the downloaded tar.gz file which is the source of all inputs
     local input_archive="${PAR_DIR}/parsec-3.0-input-sim.tar.gz"
@@ -48,8 +63,8 @@ build_parsec() {
         echo "    Input archive not found: ${input_archive}"
         need_download=true
     else
-        # Verify all apps have their input_test.tar extracted
-        for app in "${PARSEC_APPS[@]}"; do
+        # Verify apps that need inputs have their input_test.tar extracted
+        for app in "${APPS_WITH_INPUTS[@]}"; do
             local app_input=""
             # Check in apps/ first, then kernels/
             if [[ -d "${PAR_DIR}/pkgs/apps/${app}" ]]; then
@@ -80,9 +95,9 @@ build_parsec() {
             exit 1
         fi
         
-        # Verify all apps now have inputs
+        # Verify apps that need inputs now have them
         local missing_inputs=()
-        for app in "${PARSEC_APPS[@]}"; do
+        for app in "${APPS_WITH_INPUTS[@]}"; do
             local app_input=""
             if [[ -d "${PAR_DIR}/pkgs/apps/${app}" ]]; then
                 app_input="${PAR_DIR}/pkgs/apps/${app}/inputs/input_test.tar"

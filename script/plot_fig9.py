@@ -334,126 +334,6 @@ def create_two_section_bar_plot(plot_data, protocols, output_dir):
     print("--- Figure 9 plot generation complete ---")
 
 
-def print_paper_statistics(plot_data, protocols):
-    """
-    Prints detailed statistics for the paper text.
-    
-    Calculates and displays:
-    - MESI-CXL-MESI: Tso_Tso vs Arm_Arm degradation (expected 25-40%)
-    - MESI-CXL-MESI: Arm_Tso vs Arm_Arm degradation (expected 2.5-7%)
-    - MESI-CXL-MOESI: Tso_Tso vs Arm_Arm degradation (expected 22-35%)
-    - MESI-CXL-MOESI: Arm_Tso vs Arm_Arm degradation (expected 2.4-4.7%)
-    """
-    print("\n" + "="*80)
-    print("FIGURE 9 - PAPER STATISTICS")
-    print("="*80)
-    print("\nAll values are performance degradation percentages relative to Arm_Arm baseline.")
-    print("(Arm_Arm is normalized to 1.0, so degradation = (normtime - 1.0) * 100%)")
-    
-    for protocol in protocols:
-        protocol_data = plot_data[plot_data['protocol'] == protocol]
-        
-        if protocol_data.empty:
-            print(f"\n--- {protocol}: No data available ---")
-            continue
-        
-        # Get display name for protocol
-        display_name = protocol.replace('_', '-')
-        
-        print(f"\n{'='*60}")
-        print(f"Protocol: {display_name}")
-        print(f"{'='*60}")
-        
-        # Get data for each memory model
-        arm_arm_data = protocol_data[protocol_data['memory_model'] == 'Arm_Arm']
-        tso_tso_data = protocol_data[protocol_data['memory_model'] == 'Tso_Tso']
-        arm_tso_data = protocol_data[protocol_data['memory_model'] == 'Arm_Tso']
-        
-        # Calculate per-suite statistics
-        suites = protocol_data['benchmark_suite'].unique()
-        
-        print("\n--- Per-Suite Statistics ---")
-        
-        tso_tso_degradations = []
-        arm_tso_degradations = []
-        
-        for suite in sorted(suites):
-            suite_arm_arm = arm_arm_data[arm_arm_data['benchmark_suite'] == suite]['normtime'].values
-            suite_tso_tso = tso_tso_data[tso_tso_data['benchmark_suite'] == suite]['normtime'].values
-            suite_arm_tso = arm_tso_data[arm_tso_data['benchmark_suite'] == suite]['normtime'].values
-            
-            if len(suite_arm_arm) > 0 and len(suite_tso_tso) > 0:
-                # Arm_Arm is baseline (1.0), calculate degradation
-                tso_degradation = (suite_tso_tso[0] - 1.0) * 100
-                tso_tso_degradations.append(tso_degradation)
-                print(f"  {suite.upper():8s} - Tso_Tso vs Arm_Arm: {tso_degradation:+.1f}% degradation (normtime: {suite_tso_tso[0]:.3f})")
-            
-            if len(suite_arm_arm) > 0 and len(suite_arm_tso) > 0:
-                arm_degradation = (suite_arm_tso[0] - 1.0) * 100
-                arm_tso_degradations.append(arm_degradation)
-                print(f"  {suite.upper():8s} - Arm_Tso vs Arm_Arm: {arm_degradation:+.1f}% degradation (normtime: {suite_arm_tso[0]:.3f})")
-        
-        # Summary statistics
-        print(f"\n--- Summary for {display_name} ---")
-        
-        if tso_tso_degradations:
-            min_tso = min(tso_tso_degradations)
-            max_tso = max(tso_tso_degradations)
-            avg_tso = np.mean(tso_tso_degradations)
-            print(f"  Homogeneous TSO (Tso_Tso vs Arm_Arm):")
-            print(f"    Range: {min_tso:.1f}% to {max_tso:.1f}%")
-            print(f"    Average: {avg_tso:.1f}%")
-            print(f"    >>> PAPER TEXT: '{min_tso:.0f}-{max_tso:.0f}% performance degradation'")
-        
-        if arm_tso_degradations:
-            min_arm = min(arm_tso_degradations)
-            max_arm = max(arm_tso_degradations)
-            avg_arm = np.mean(arm_tso_degradations)
-            print(f"  Mixed MCM (Arm_Tso vs Arm_Arm):")
-            print(f"    Range: {min_arm:.1f}% to {max_arm:.1f}%")
-            print(f"    Average: {avg_arm:.1f}%")
-            print(f"    >>> PAPER TEXT: '{min_arm:.1f}-{max_arm:.1f}% performance degradation'")
-    
-    # Overall summary for paper
-    print("\n" + "="*80)
-    print("SUMMARY FOR PAPER TEXT")
-    print("="*80)
-    
-    # MESI-CXL-MESI statistics
-    mesi_mesi_data = plot_data[plot_data['protocol'] == 'MESI_CXL_MESI']
-    if not mesi_mesi_data.empty:
-        tso_data = mesi_mesi_data[mesi_mesi_data['memory_model'] == 'Tso_Tso']
-        arm_data = mesi_mesi_data[mesi_mesi_data['memory_model'] == 'Arm_Tso']
-        
-        if not tso_data.empty:
-            tso_degradations = [(v - 1.0) * 100 for v in tso_data['normtime'].values]
-            print(f"\nMESI-CXL-MESI + Tso_Tso: {min(tso_degradations):.0f}-{max(tso_degradations):.0f}% degradation")
-        
-        if not arm_data.empty:
-            arm_degradations = [(v - 1.0) * 100 for v in arm_data['normtime'].values]
-            print(f"MESI-CXL-MESI + Arm_Tso: {min(arm_degradations):.1f}-{max(arm_degradations):.1f}% degradation")
-    
-    # MESI-CXL-MOESI statistics
-    mesi_moesi_data = plot_data[plot_data['protocol'] == 'MESI_CXL_MOESI']
-    if not mesi_moesi_data.empty:
-        tso_data = mesi_moesi_data[mesi_moesi_data['memory_model'] == 'Tso_Tso']
-        arm_data = mesi_moesi_data[mesi_moesi_data['memory_model'] == 'Arm_Tso']
-        
-        if not tso_data.empty:
-            tso_degradations = [(v - 1.0) * 100 for v in tso_data['normtime'].values]
-            print(f"\nMESI-CXL-MOESI + Tso_Tso: {min(tso_degradations):.0f}-{max(tso_degradations):.0f}% degradation")
-        
-        if not arm_data.empty:
-            arm_degradations = [(v - 1.0) * 100 for v in arm_data['normtime'].values]
-            print(f"MESI-CXL-MOESI + Arm_Tso: {min(arm_degradations):.1f}-{max(arm_degradations):.1f}% degradation")
-    
-    print("\n" + "="*80)
-    print("Key takeaway: C3 successfully bridges arbitrary combinations of")
-    print("CC protocols and MCMs with minimal performance overhead (2-7%)")
-    print("compared to homogeneous TSO setups (22-40% degradation).")
-    print("="*80 + "\n")
-
-
 def main():
     """Main execution"""
     benchmark_suites = ["parsec", "Splash", "Phoenix"]
@@ -466,18 +346,12 @@ def main():
         print("Run experiments first with './script/run-fig9.sh'")
         sys.exit(1)
 
-    # Part 1: Process and clean data
     process_and_clean_data(benchmark_suites, suffixes, protocols, 
                            input_dir=RESULTS_DIR, output_dir=RESULTS_DIR)
 
-    # Part 2: Load all cleared data, perform normalization, and aggregate for plotting
     plot_data = normalize_and_prepare_plot_data(benchmark_suites, suffixes, protocols, 
                                                  input_dir=RESULTS_DIR)
 
-    # Part 3: Print statistics for paper text
-    print_paper_statistics(plot_data, protocols)
-
-    # Part 4: Generate the two-section styled bar plot
     create_two_section_bar_plot(plot_data, protocols, output_dir=PLOT_DIR)
 
     print("\nFigure 9 generation completed.")

@@ -27,9 +27,7 @@ FILTER_TEST="${1:-}"
 FILTER_PROTOCOL="${2:-}"
 FILTER_MCM="${3:-}"
 
-#------------------------------------------------------------------------------
-# Show help
-#------------------------------------------------------------------------------
+
 show_help() {
     echo "Usage: $0 [test_name] [protocol] [mcm]"
     echo ""
@@ -51,9 +49,7 @@ show_help() {
     exit 0
 }
 
-# ------------------------------------------------------------------------------
-# List available tests
-# ------------------------------------------------------------------------------
+
 list_tests() {
     if [[ ! -f "${CONFIG_FILE}" ]]; then
         echo "Configuration file not found. Generating..."
@@ -71,9 +67,7 @@ list_tests() {
     exit 0
 }
 
-#------------------------------------------------------------------------------
-# Check prerequisites
-#------------------------------------------------------------------------------
+
 check_prerequisites() {
     local found=0
     for protocol in MESI_unord_CXL MESI_CXL_MOESI; do
@@ -107,13 +101,11 @@ run_experiment() {
     local cmd_line="$4"
     local log_file="${LOG_DIR}/${test_name}_${protocol}_${mcm}.log"
     
-    # Backup existing log if present
     if [[ -f "$log_file" ]]; then
         local timestamp=$(date +"%Y%m%d_%H%M%S")
         cp "$log_file" "${LOG_DIR}/backup/${test_name}_${protocol}_${mcm}_${timestamp}.log"
     fi
     
-    # Run in background with output to log file
     {
         echo "[$(date)] STARTING: ${test_name}/${protocol}/${mcm}"
         local start_time=$(date +%s)
@@ -134,21 +126,13 @@ run_experiment() {
     LAST_PID=$!
 }
 
-# ------------------------------------------------------------------------------
-# Check if litmus test passed
-# Three possible output formats:
-#   1. herd7 style: "Positive: 0, Negative: N" → PASS if Positive=0
-#   2. Failure Test style: "Failure Test: 0" → PASS if Failure Test=0
-#   3. IRIW style with Success!: "Success!" and "Count (r0:2 and r1:2): 0"
-# ------------------------------------------------------------------------------
+
 check_test_result() {
     local output_file="$1"
     
     [[ ! -f "$output_file" ]] && echo "NO_OUTPUT" && return
     
-    # Format 1: herd7 style - "Positive: N, Negative: M"
-    # Example: "Positive: 0, Negative: 1000000"
-    # PASS if Positive is 0 (no forbidden states observed)
+
     if grep -q "Positive:" "$output_file"; then
         # Extract the number after "Positive:" (handles "Positive: 0," format)
         local positive=$(grep "Positive:" "$output_file" | sed -n 's/.*Positive:[[:space:]]*\([0-9]*\).*/\1/p' | head -1)
@@ -160,9 +144,7 @@ check_test_result() {
         return
     fi
     
-    # Format 2: Failure Test style - "Failure Test: N"
-    # Example: "Pass Test: 100000" and "Failure Test: 0"
-    # PASS if Failure Test is 0
+
     if grep -q "Failure Test:" "$output_file"; then
         # Extract the number after "Failure Test:"
         local failures=$(grep "Failure Test:" "$output_file" | sed -n 's/.*Failure Test:[[:space:]]*\([0-9]*\).*/\1/p' | head -1)
@@ -174,9 +156,7 @@ check_test_result() {
         return
     fi
     
-    # Format 3: IRIW style with "Count (r0:2 and r1:2): N"
-    # This checks for forbidden state count in IRIW tests
-    # May have multiple occurrences, sum them all
+
     if grep -q "Count (r0:2 and r1:2):" "$output_file"; then
         local total_forbidden=0
         while IFS= read -r line; do
