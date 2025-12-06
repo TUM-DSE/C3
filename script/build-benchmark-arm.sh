@@ -224,7 +224,7 @@ build_splash_arm() {
     
     # Now build the main benchmarks
     echo "    Building main benchmarks..."
-    make -j "${JOBS}"
+    make CC=aarch64-linux-gnu-gcc AR=aarch64-linux-gnu-ar -j "${JOBS}"
     
     cd "${REPO_ROOT}"
     echo "==> SPLASH-4 ARM build complete"
