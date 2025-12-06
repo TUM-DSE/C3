@@ -20,6 +20,5 @@ raytrace.c: raytrace.c.in incl.h address.h
 
 incl.h:	user_options.h const.h my_types.h global.h macros.h address.h
 
-# Only rebuild libtiff if libtiff.a doesn't exist (pre-compiled for ARM cross-compilation)
 libtiff/libtiff.a:
-	@if [ ! -f libtiff/libtiff.a ]; then make -C libtiff; fi
+	make -C libtiff

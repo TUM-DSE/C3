@@ -26,8 +26,7 @@
 #
 DESTDIR=/usr/local
 #
-CC=	aarch64-linux-gnu-gcc
-AR=	aarch64-linux-gnu-ar
+AR= aarch64-unknown-linux-gnu-ar
 NULL=
 
 IPATH=	-I.
@@ -145,9 +144,8 @@ tif_compress.o: tif_compress.c Makefile
 	${CC} -c ${CFLAGS} ${CONF_COMPRESSION} tif_compress.c
 tif_fax3.o: tif_fax3.c g3states.h t4.h tif_fax3.h
 
-# For cross-compilation: generate g3states.h with native compiler
 g3states.h: mkg3states.c t4.h
-	gcc -o mkg3states ${IPATH} mkg3states.c
+	gcc -o mkg3states -O -I. -DUSE_VARARGS=0 -DUSE_PROTOTYPES=1 -DHAVE_IEEEFP=1 -DCOLORIMETRY_SUPPORT -DJPEG_SUPPORT -DYCBCR_SUPPORT -DCMYK_SUPPORT -DMMAP_SUPPORT -ansi -fPIC mkg3states.c
 	./mkg3states -c > g3states.h
 
 install: all installh
@@ -163,7 +161,7 @@ installh: ${INCS}
 	done
 
 clean:
-	rm -f ${OBJS} core a.out mkg3states
+	rm -f ${ALL} ${OBJS} core a.out mkg3states g3states.h
  
 tags:	${SRCS}
 	${CTAGS} ${SRCS}
