@@ -188,7 +188,7 @@ This runs a deterministic benchmark (kmeans) and compares the simulated output a
 
 ---
 
-## Generate Configuration Files
+## Generate Workload Configurations
 
 Before running experiments, generate the configuration files that define each simulation:
 
