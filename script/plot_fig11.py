@@ -354,9 +354,9 @@ def create_plot(all_apps_data):
     # Legend - Miss Latency
     legend_latency = []
     latency_labels = {
-        'local': 'Low (0-150 cycles)',
-        'memory': 'Medium (150-850 cycles)',
-        'remote': 'High (850+ cycles)',
+        'local': 'Low (0-74 ns)',
+        'memory': 'Medium (75-400 ns)',
+        'remote': 'High (400+ ns)',
     }
     for category in ['local', 'memory', 'remote']:
         color = CATEGORY_BASE_COLORS[category][0]
