@@ -1,6 +1,6 @@
-FROM ghcr.io/gem5/ubuntu-24.04_all-dependencies:v25-0
+FROM ghcr.io/gem5/ubuntu-24.04_all-dependencies:v25-0 AS base
 
-RUN apt -y update && apt -y upgrade && apt -y install \
+RUN apt -y update && apt -y install \
     build-essential \
     cmake \
     g++ \
@@ -33,3 +33,14 @@ RUN apt -y update && apt -y upgrade && apt -y install \
     g++-aarch64-linux-gnu \
     python3-pandas python3-numpy python3-matplotlib python3-seaborn \
     && rm -rf /var/lib/apt/lists/*
+
+FROM base AS builder
+
+SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
+RUN git clone https://github.com/TUM-DSE/C3 /c3-artifact
+RUN cd /c3-artifact && ./script/build-gem5.sh
+RUN cd /c3-artifact && ./script/build-benchmark.sh all
+
+FROM base
+
+COPY --from=builder /c3-artifact/gem5 /c3-artifact/benchmarks /
