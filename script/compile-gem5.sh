@@ -16,11 +16,18 @@ fi
 
 echo " Extracting gem5"
 
-rm -rf "${GEM5_DIR}"
+# Check gem5 dir exists
+[[ ! -d $GEM5_DIR ]] && mkdir $GEM5_DIR
+# Check gem5 not empty
+[[ -n "`ls $GEM5_DIR`" ]] && read -e -p " gem5 directory not empty ... Overwrite current content? [y/n] " choice
+# Ask if gem5 dir should be overwritten
+[[ "$choice" == [Yy]* ]] && echo " Overwriting... " || { echo " Continuing with current content... "; exit 0; }
+
+rm -rf "${GEM5_DIR}/*"
 tar -xzf "${ARCHIVE}" -C "${REPO_ROOT}"
 find "${GEM5_DIR}" -type f \( -name "*.py" -o -name "*.sh" -o -name "*.pl" \) -exec chmod +x {} \;
 chmod +x "${GEM5_DIR}/ext/libelf/native-elf-format" 2>/dev/null || true
-echo " Extracterd to ${GEM5_DIR}"
+echo " Extracted to ${GEM5_DIR}"
 
 echo "Copying slicc protocols"
 cp -r "${SLICC_SRC}" "${SLICC_DEST}/"
