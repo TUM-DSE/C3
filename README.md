@@ -10,20 +10,23 @@ Artifact for "C3: CXL Coherence Controllers for Heterogeneous Architectures", HP
 
 This repository contains the models and workloads for evaluating CXL-based cache coherence protocols using the gem5 simulator. The evaluated protocols are:
 
-- **MESI-MESI**: Baseline MESI protocol
-- **MESI-CXL-MESI**
-- **MESI-CXL-MOESI**
-- **MESI-CXL-MESIF**
+- **MESI-MESI-MESI**: Baseline MESI protocol
+- **MESI-CXL-MESI**: Two MESI cluster connected through CXL coherence
+- **MESI-CXL-MOESI**: MESI & MOESI clusters connected through CXL coherence
+- **MESI-CXL-MESIF**: MESI & MESIF clusters connected through CXL coherence
 
 ---
 
 ## Table of Contents
 
+- [Quick Start](#Quick-Start)
 - [Prerequisites](#prerequisites)
 - [Install Dependencies](#install-dependencies)
 - [Repository Structure](#repository-structure)
 - [Build gem5](#build-gem5)
 - [Build Benchmarks](#build-benchmarks)
+- [Functional Validation](#functional-validation)
+- [Generate Workload Configurations](#generate-workload-configurations)
 - [Run Experiments](#run-experiments)
   - [Figure 9: ARM Heterogeneous MCM](#figure-9-arm-heterogeneous-mcm)
   - [Figure 10: Execution Time Comparison](#figure-10-execution-time-comparison)
@@ -32,9 +35,39 @@ This repository contains the models and workloads for evaluating CXL-based cache
 
 ---
 
+## Quick Start
+
+For simplicity, we provide Docker images:
+
+- **Option 1: [Prebuilt](https://hub.docker.com/r/gingerbreadz/c3-artifact-prebuilt) image**:
+
+```bash
+$ just docker-prebuilt
+```
+
+Ready to run experiments -- includes pre-compiled gem5 models for C3 and pre-compiled workloads.
+
+Then follow from: [Functional Validation](#functional-validation)
+
+- **Option 2: [Base](https://hub.docker.com/r/gingerbreadz/c3-artifact-base) image**:
+
+```bash
+$ just docker-base
+```
+
+Ready to compile gem5 models and the workloads -- includes system dependencies.
+
+Then follow from: [Build gem5](#build-gem5)
+
+- **Option 3: Manual set-up**
+
+Follow the next steps to manually set up the environment
+
+---
+
 ## Prerequisites
 
-* **OS**: Ubuntu 22.04 LTS
+* **OS**: Ubuntu 22.04 LTS or 24.04 LTS
 * **Compiler**: GCC 11.4.0
 * **Python**: 3.10+
 * **SCons**: 4.0+
