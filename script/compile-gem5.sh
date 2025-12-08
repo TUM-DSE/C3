@@ -14,6 +14,9 @@ if [[ ! -f "${ARCHIVE}" ]]; then
     exit 1
 fi
 
+# default to overwrite for non-interactive shells
+choice="y"
+
 echo " Extracting gem5"
 
 # Check gem5 dir exists
