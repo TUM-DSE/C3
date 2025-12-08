@@ -39,27 +39,27 @@ This repository contains the models and workloads for evaluating CXL-based cache
 
 For simplicity, we provide Docker images:
 
-- **Option 1: [Prebuilt](https://hub.docker.com/r/gingerbreadz/c3-artifact-prebuilt) image**:
+- **Option 1: [Prebuilt](https://hub.docker.com/r/gingerbreadz/c3-artifact-prebuilt) image** (~40 GB)
 
 ```bash
 $ just docker-prebuilt
 ```
 
-Ready to run experiments -- includes pre-compiled gem5 models for C3 and pre-compiled workloads.
+Ready to run experiments -- includes pre-compiled gem5 models for C3 and pre-compiled workloads
 
 Then follow from: [Functional Validation](#functional-validation)
 
-- **Option 2: [Base](https://hub.docker.com/r/gingerbreadz/c3-artifact-base) image**:
+- **Option 2: [Base](https://hub.docker.com/r/gingerbreadz/c3-artifact-base) image** (~1 GB)
 
 ```bash
 $ just docker-base
 ```
 
-Ready to compile gem5 models and the workloads -- includes system dependencies.
+Ready to compile gem5 models and the workloads -- includes system dependencies
 
 Then follow from: [Build gem5](#build-gem5)
 
-- **Option 3: Manual set-up**
+- **Option 3: Manual set-up** (~1h30-3h, 30 GB free space required)
 
 Follow the next steps to manually set up the environment
 
@@ -161,6 +161,8 @@ C-3-Artifact/
 
 ## Build gem5
 
+**Expected build time**: ~1h-2h (depending on CPU and parallelism).
+
 Build the gem5 simulator with all cache coherence protocols for both X86 and ARM architectures:
 
 ```bash
@@ -181,12 +183,11 @@ This builds gem5 for each protocol and architecture:
 - `gem5/build/ARM_MESI_CXL_MOESI/gem5.opt`
 - `gem5/build/ARM_MESI_CXL_MESIF/gem5.opt`
 
-
-**Expected build time**: ~30-60 minutes per architecture (depending on CPU and parallelism).
-
 ---
 
 ## Build Benchmarks
+
+**Expected build time**: ~20-40 minutes
 
 Build all three benchmark suites (PARSEC, SPLASH-4, Phoenix) for both X86 and ARM:
 
@@ -203,11 +204,11 @@ To build for a specific architecture only:
 ./script/build-benchmark-arm.sh   # Build ARM benchmarks only
 ```
 
-**Expected build time**: ~10-20 minutes per architecture
-
 ---
 
-## Functional Validation (Optional)
+## Functional Validation
+
+**[Optional] Expected run time**: ~8min
 
 Before running the full experiments, you can validate that gem5 and benchmarks are working correctly:
 
@@ -222,6 +223,8 @@ This runs a deterministic benchmark (kmeans) and compares the simulated output a
 ---
 
 ## Generate Workload Configurations
+
+**Expected build time**: ~0 minutes
 
 Before running experiments, generate the configuration files that define each simulation:
 
@@ -388,6 +391,10 @@ Litmus tests validate the correctness of memory consistency model implementation
 ```
 
 **Output**:
+
+Each Test result (`PASS`/`FAIL`) is directly printed on stdout, with a summary after all are completed
+
+**Detailed Output**:
 ```
 data/litmus/
 ├── gem5.output/           # Raw simulation outputs per test
