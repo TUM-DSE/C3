@@ -28,8 +28,8 @@ PLOT_DIR = os.path.join(DATA_DIR, 'plot')
 mpl.rcParams["text.latex.preamble"] = r"\usepackage{amsmath}"
 mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
-plt.rcParams['xtick.labelsize'] = 7
-plt.rcParams['ytick.labelsize'] = 7
+plt.rcParams['xtick.labelsize'] = 8
+plt.rcParams['ytick.labelsize'] = 8
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Times New Roman']
 
@@ -263,7 +263,7 @@ def create_figure10_plot(data_parsec, data_splash, data_phoenix):
     hatches = PROTOCOL_HATCHES
     
     # Create 4 subplots in a row
-    fig = plt.figure(figsize=(15, 3))
+    fig = plt.figure(figsize=(15, 4))
     gs = GridSpec(1, 4, figure=fig, width_ratios=[1, 1, 1, 0.15], wspace=0.04)
     
     # Subplots for PARSEC, SPLASH, PHOENIX and the MEAN plot
@@ -372,9 +372,9 @@ def create_figure10_plot(data_parsec, data_splash, data_phoenix):
         
         # Only the first plot gets a y-label
         if i == 0:
-            ax.set_ylabel("Normalized Execution Time", fontsize=7)
+            ax.set_ylabel("Normalized\nExecution Time", fontsize=8)
             ax.yaxis.set_label_coords(-0.08, 0.5)
-            ax.tick_params(axis='y', labelsize=6)
+            ax.tick_params(axis='y', labelsize=8)
         else:
             ax.set_ylabel("")
             ax.tick_params(axis='y', which='both', labelleft=False)
