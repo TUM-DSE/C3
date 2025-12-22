@@ -5,6 +5,7 @@ RUN apt -y update && apt -y upgrade && apt -y install \
     cmake \
     g++ \
     git \
+    curl \
     python3 \
     python3-pip \
     python3-venv \
@@ -20,6 +21,7 @@ RUN apt -y update && apt -y upgrade && apt -y install \
     pkg-config \
     wget \
     m4 \
+    bc \
     libtbb-dev \
     gettext \
     libgettextpo-dev \

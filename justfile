@@ -8,7 +8,7 @@ gem5-unpack:
 docker-build-base:
     docker build -f ./docker/base/Dockerfile -t gingerbreadz/c3-artifact-base:v1 .
 
-# build C3 prebuilt docker image -- from local gem5 & benchmarks directories with prebuilt binaries
+# build C3 prebuilt docker image -- from local gem5 & benchmarks directories, requires local gem5 & benchmarks dir with prebuilt binaries
 docker-build-prebuilt:
     docker build -f ./docker/prebuilt/Dockerfile --build-arg GEM5_PATH=gem5 --build-arg BENCH_PATH=benchmarks -t gingerbreadz/c3-artifact-prebuilt:v1 .
 

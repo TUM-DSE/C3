@@ -1,0 +1,7 @@
+data/
+figures/
+gem5.tar.gz
+.git
+script/
+setup/
+slicc/

@@ -5,6 +5,7 @@ RUN apt -y update && apt -y install \
     cmake \
     g++ \
     git \
+    curl \
     python3 \
     python3-pip \
     python3-venv \
@@ -19,6 +20,7 @@ RUN apt -y update && apt -y install \
     libjemalloc-dev \
     pkg-config \
     wget \
+    bc \
     m4 \
     libtbb-dev \
     gettext \
@@ -40,7 +42,9 @@ SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 RUN git clone https://github.com/TUM-DSE/C3 /c3-artifact
 RUN cd /c3-artifact && ./script/build-gem5.sh
 RUN cd /c3-artifact && ./script/build-benchmark.sh all
+RUN cd /c3-artifact && ./script/create-configurations.sh
 
 FROM base
 
-COPY --from=builder /c3-artifact/gem5 /c3-artifact/benchmarks /
+COPY --from=builder --chown=1000:1000 --chmod=777 /c3-artifact/gem5/ /gem5/
+COPY --from=builder --chown=1000:1000 --chmod=777 /c3-artifact/benchmarks/ /benchmarks/
