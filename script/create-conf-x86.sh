@@ -16,7 +16,6 @@ OUTPUT_BASE="data/fig_10/gem5.output"
 
 # Create output directories
 mkdir -p "${CONFIG_DIR}"
-mkdir -p "${REPO_ROOT}/output"
 
 #------------------------------------------------------------------------------
 # Generate benchmarks.conf
