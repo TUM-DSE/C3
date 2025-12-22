@@ -17,6 +17,17 @@ docker-build-multi:
     docker build -f ./docker/multi/Dockerfile -t gingerbreadz/c3-artifact-prebuilt:v1 .
 
 # From C3 prebuilt image -- skip gem5 and benchmark compilation
+docker-prebuilt:
+    docker run                                     \
+        -u {{UID}}:{{GID}}                           \
+        --device /dev/kvm \
+        --volume ./script:/script       \
+        --volume ./setup:/setup       \
+        --volume ./slicc:/slicc       \
+        --volume ./data:/data       \
+        -it gingerbreadz/c3-artifact-prebuilt:v1
+
+# From c3 base image -- only includes extra dependencies, compile gem5 & benchmarks from instructions
 docker-base:
     docker run                                     \
         -u {{UID}}:{{GID}}                           \
@@ -29,20 +40,6 @@ docker-base:
         --volume ./slicc:/slicc       \
         --volume ./data:/data       \
         -it gingerbreadz/c3-artifact-base:v1
-
-# From c3 base image -- only includes extra dependencies, compile gem5 & benchmarks from instructions
-docker-prebuilt:
-    docker run                                     \
-        -u {{UID}}:{{GID}}                           \
-        --device /dev/kvm \
-        --mount type=bind,source=./gem5.tar.gz,target=/gem5.tar.gz \
-        --volume ./gem5:/gem5       \
-        --volume ./benchmarks:/benchmarks       \
-        --volume ./script:/script       \
-        --volume ./setup:/setup       \
-        --volume ./slicc:/slicc       \
-        --volume ./data:/data       \
-        -it gingerbreadz/c3-artifact-prebuilt:v1
 
 # From gem5 official base image -- install extra C3 dependencies and build gem5 & benchmarks from instructions
 gem5-docker:
