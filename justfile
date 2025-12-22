@@ -20,7 +20,6 @@ docker-build-multi:
 docker-prebuilt:
     docker run                                     \
         -u {{UID}}:{{GID}}                           \
-        --device /dev/kvm \
         --volume ./script:/script       \
         --volume ./setup:/setup       \
         --volume ./slicc:/slicc       \
@@ -31,7 +30,6 @@ docker-prebuilt:
 docker-base:
     docker run                                     \
         -u {{UID}}:{{GID}}                           \
-        --device /dev/kvm \
         --mount type=bind,source=./gem5.tar.gz,target=/gem5.tar.gz \
         --volume ./gem5:/gem5       \
         --volume ./benchmarks:/benchmarks       \
@@ -44,7 +42,6 @@ docker-base:
 # From gem5 official base image -- install extra C3 dependencies and build gem5 & benchmarks from instructions
 gem5-docker:
     sudo docker run                                     \
-        --device /dev/kvm \
         --mount type=bind,source=./gem5.tar.gz,target=/gem5.tar.gz \
         --volume ./gem5:/gem5       \
         --volume ./benchmarks:/benchmarks       \
