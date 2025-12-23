@@ -370,6 +370,8 @@ data/fig_11/
 
 ### Litmus Tests
 
+**Expected run time**: ~5 hours
+
 Litmus tests validate the correctness of memory consistency model implementations on ARM.
 
 ```bash
