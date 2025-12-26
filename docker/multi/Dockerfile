@@ -1,4 +1,4 @@
-FROM ghcr.io/gem5/ubuntu-24.04_all-dependencies:v25-0 AS base
+FROM ghcr.io/gem5/ubuntu-22.04_all-dependencies:v23-0 AS base
 
 RUN apt -y update && apt -y install \
     build-essential \
@@ -29,7 +29,8 @@ RUN apt -y update && apt -y install \
     libxext-dev \
     libx11-dev \
     libxmu-dev \
-    libglut-dev \
+    #libglut-dev \
+    freeglut3-dev \
     libxi-dev \
     gcc-aarch64-linux-gnu \
     g++-aarch64-linux-gnu \

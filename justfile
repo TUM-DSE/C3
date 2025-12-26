@@ -6,15 +6,15 @@ gem5-unpack:
 
 # build C3 base docker image
 docker-build-base:
-    docker build -f ./docker/base/Dockerfile -t gingerbreadz/c3-artifact-base:v1 .
+    docker build -f ./docker/base/Dockerfile -t gingerbreadz/c3-artifact-base:v2 .
 
 # build C3 prebuilt docker image -- from local gem5 & benchmarks directories, requires local gem5 & benchmarks dir with prebuilt binaries
 docker-build-prebuilt:
-    docker build -f ./docker/prebuilt/Dockerfile --build-arg GEM5_PATH=gem5 --build-arg BENCH_PATH=benchmarks -t gingerbreadz/c3-artifact-prebuilt:v1 .
+    docker build -f ./docker/prebuilt/Dockerfile --build-arg GEM5_PATH=gem5 --build-arg BENCH_PATH=benchmarks -t gingerbreadz/c3-artifact-prebuilt:v2 .
 
 # build C3 prebuilt docker image -- automatically build from C3 github repo, build steps are run when building docker image
 docker-build-multi:
-    docker build -f ./docker/multi/Dockerfile -t gingerbreadz/c3-artifact-prebuilt:v1 .
+    docker build -f ./docker/multi/Dockerfile -t gingerbreadz/c3-artifact-prebuilt:v2 .
 
 # From C3 prebuilt image -- skip gem5 and benchmark compilation
 docker-prebuilt:
@@ -24,7 +24,7 @@ docker-prebuilt:
         --volume ./setup:/setup       \
         --volume ./slicc:/slicc       \
         --volume ./data:/data       \
-        -it gingerbreadz/c3-artifact-prebuilt:v1
+        -it gingerbreadz/c3-artifact-prebuilt:v2
 
 # From c3 base image -- only includes extra dependencies, compile gem5 & benchmarks from instructions
 docker-base:
@@ -37,7 +37,7 @@ docker-base:
         --volume ./setup:/setup       \
         --volume ./slicc:/slicc       \
         --volume ./data:/data       \
-        -it gingerbreadz/c3-artifact-base:v1
+        -it gingerbreadz/c3-artifact-base:v2
 
 # From gem5 official base image -- install extra C3 dependencies and build gem5 & benchmarks from instructions
 gem5-docker:
@@ -49,4 +49,4 @@ gem5-docker:
         --volume ./setup:/setup       \
         --volume ./slicc:/slicc       \
         --volume ./data:/data       \
-        -it ghcr.io/gem5/ubuntu-24.04_all-dependencies:v25-0
+        -it ghcr.io/gem5/ubuntu-24.04_all-dependencies:v23-0
