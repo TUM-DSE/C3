@@ -34,8 +34,9 @@ RUN apt -y update && apt -y install \
     libxi-dev \
     gcc-aarch64-linux-gnu \
     g++-aarch64-linux-gnu \
-    python3-pandas python3-numpy python3-matplotlib python3-seaborn \
+    # python3-pandas python3-numpy python3-matplotlib python3-seaborn \
     && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir pandas numpy matplotlib seaborn
 
 FROM base AS builder
 
