@@ -186,7 +186,7 @@ declare -A splash_switched=(
     ["radix"]="No"
     ["raytrace"]="No"
     ["volrend"]="Yes"
-    ["volrend-npl"]="No"
+    ["volrend-npl"]="Yes"
     ["water-nsquared"]="No"
     ["water-spatial"]="No"
 )
