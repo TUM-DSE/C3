@@ -15,7 +15,7 @@
 
 
 # Package dependencies
-build_deps="cmake mesa"
+build_deps="mesa"
 
 # Environment to use for configure script and Makefile
 # NOTE: By default PARSEC links raytrace to mesa with Xlib driver so that all
@@ -30,4 +30,4 @@ build_env="version=pthreads CXXFLAGS=\"-I${PARSECDIR}/pkgs/libs/mesa/inst/${PARS
 build_inplace="TRUE"
 
 # Arguments to pass to the configure script, if it exists
-build_conf="--build=${GNU_HOST_NAME} --host=${GNU_TARGET_NAME}"
+build_conf=""
