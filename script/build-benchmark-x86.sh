@@ -204,3 +204,8 @@ case "${1:-all}" in
     all)     build_parsec; build_splash; build_phoenix ;;
     *)       echo "Usage: $0 [parsec|splash|phoenix|all]"; exit 1 ;;
 esac
+
+echo ""
+echo "=============================================="
+echo "X86 benchmark build complete!"
+echo "=============================================="
