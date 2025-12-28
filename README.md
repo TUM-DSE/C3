@@ -67,7 +67,7 @@ Follow the next steps to manually set up the environment
 
 ## Prerequisites
 
-* **OS**: Ubuntu 22.04 LTS or 24.04 LTS
+* **OS**: Ubuntu 22.04 LTS
 * **Compiler**: GCC 11.4.0
 * **Python**: 3.10+
 * **SCons**: 4.0+
@@ -84,6 +84,7 @@ sudo apt-get update && sudo apt-get install -y \
     cmake \
     g++ \
     git \
+    curl \
     python3 \
     python3-pip \
     python3-venv \
@@ -99,6 +100,7 @@ sudo apt-get update && sudo apt-get install -y \
     pkg-config \
     wget \
     m4 \
+    bc \
     libtbb-dev \
     gettext \
     libgettextpo-dev \
@@ -106,7 +108,8 @@ sudo apt-get update && sudo apt-get install -y \
     libxext-dev \
     libx11-dev \
     libxmu-dev \
-    libglut-dev \
+    #libglut-dev \
+    freeglut3-dev \
     libxi-dev \
     gcc-aarch64-linux-gnu \
     g++-aarch64-linux-gnu
