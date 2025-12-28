@@ -21,8 +21,19 @@ if [ ! -z "$@" ]; then
   echo "Warning: Ignoring specified arguments"
 fi
 
+# Use system cmake instead of PARSEC's old cmake 2.6 which has compatibility issues
+CMAKE_BIN="cmake"
+if [ -x "${PARSECDIR}/pkgs/tools/cmake/inst/${PARSECPLAT}/bin/cmake" ]; then
+  # Check if system cmake is available and prefer it
+  if command -v cmake &> /dev/null; then
+    CMAKE_BIN="cmake"
+  else
+    CMAKE_BIN="${PARSECDIR}/pkgs/tools/cmake/inst/${PARSECPLAT}/bin/cmake"
+  fi
+fi
+
 # Esegue cmake con i flag corretti
-${PARSECDIR}/pkgs/tools/cmake/inst/${PARSECPLAT}/bin/cmake -G "Unix Makefiles" \
+${CMAKE_BIN} -G "Unix Makefiles" \
   -D CMAKE_PREFIX_PATH=${GNUTOOL_HOME} \
   -D CMAKE_INSTALL_PREFIX=${PARSECDIR}/pkgs/apps/raytrace/inst/${PARSECPLAT} \
   -D CMAKE_CXX_COMPILER=${CXX} \

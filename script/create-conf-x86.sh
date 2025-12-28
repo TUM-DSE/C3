@@ -48,7 +48,7 @@ declare -A parsec_cores=(
     ["facesim"]=2
     ["ferret"]=24
     ["freqmine"]=24
-    ["raytrace"]=24
+    ["raytrace"]=30
     ["streamcluster"]=16
     ["swaptions"]=24
     ["vips"]=30
@@ -294,7 +294,7 @@ declare -A phoenix_cores=(
     ["kmeans"]=10
     ["linear_regression"]=8
     ["matrix_multiply"]=10
-    ["pca"]=30
+    ["pca"]=36
     ["string_match"]=8
     ["word_count"]=8
 )
