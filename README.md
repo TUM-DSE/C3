@@ -42,7 +42,8 @@ For simplicity, we provide Docker images:
 - **Option 1: [Prebuilt](https://hub.docker.com/r/gingerbreadz/c3-artifact-prebuilt) image** (~40 GB)
 
 ```bash
-$ just docker-prebuilt
+$ just docker-prebuilt  # enter the container shell
+$ ./script/run-all-fig.sh && ./script/run-litmus.sh     # run all experiments (~10h)
 ```
 
 Ready to run experiments -- includes pre-compiled gem5 models for C3 and pre-compiled workloads
@@ -52,7 +53,11 @@ Then follow from: [Functional Validation](#functional-validation)
 - **Option 2: [Base](https://hub.docker.com/r/gingerbreadz/c3-artifact-base) image** (~1 GB)
 
 ```bash
-$ just docker-base
+$ just docker-base  # enter the container shell
+$ ./script/build-gem5.sh \
+  && ./script/build-benchmark.sh \
+  && ./script/create-configurations.sh \
+  && ./script/run-all-fig.sh && ./script/run-litmus.sh     # build all and run all experiments (~15h)
 ```
 
 Ready to compile gem5 models and the workloads -- includes system dependencies
@@ -61,7 +66,7 @@ Then follow from: [Build gem5](#build-gem5)
 
 - **Option 3: Manual set-up** (~1h30-3h, 30 GB free space required)
 
-Follow the next steps to manually set up the environment
+Follow the next steps to manually set up the environment from: [Prerequisites](#prerequisites)
 
 ---
 
