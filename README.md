@@ -263,6 +263,8 @@ This runs `run-fig9.sh`, `run-fig10.sh`, and `run-fig11.sh` sequentially.
 
 #### Figure 9: ARM Heterogeneous MCM
 
+**Expected run time**: ~2 hours (longest workload `splash radiosity`: 2h)
+
 Figure 9 evaluates heterogeneous memory consistency models (MCM) on ARM architecture, comparing three configurations:
 
 - **ARM-ARM**: Both clusters use ARM relaxed memory model
@@ -299,6 +301,8 @@ python3 ./script/plot_fig9.py
 ---
 
 #### Figure 10: Execution Time Comparison
+
+**Expected run time**: ~3 hours (longest workload `splash radiosity`: 2h40)
 
 Figure 10 compares execution time across all protocols for PARSEC, Splash-4, and Phoenix benchmarks.
 
@@ -349,6 +353,8 @@ python3 ./script/plot_fig10.py
 ---
 
 #### Figure 11: Miss Latency Breakdown
+
+**Expected run time**: 0 minutes (generated from fig10 runs)
 
 Figure 11 shows the miss latency breakdown for 4 representative applications (Barnes, LU-Ncont, Histogram, Vips).
 
