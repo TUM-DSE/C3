@@ -49,4 +49,4 @@ gem5-docker:
         --volume ./setup:/setup       \
         --volume ./slicc:/slicc       \
         --volume ./data:/data       \
-        -it ghcr.io/gem5/ubuntu-24.04_all-dependencies:v23-0
+        -it ghcr.io/gem5/ubuntu-22.04_all-dependencies:v23-0
